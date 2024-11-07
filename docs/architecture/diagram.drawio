@@ -1,0 +1,11 @@
+<mxfile>
+    <diagram id="app-architecture" name="Architecture">
+        <mxGraphModel>
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <!-- Add your architecture components here -->
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
