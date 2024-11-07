@@ -209,7 +209,39 @@ kubernetes   ClusterIP   172.20.0.1   <none>        443/TCP   5m39s
 - A configuração do cluster foi adicionada ao arquivo kubeconfig
 - O teste de conectividade com o cluster foi bem-sucedido
 ## Próximos Passos
+### 11. Criação e Configuração do Nodegroup EKS
 
+**Criação do Nodegroup:**
+```bash
+aws eks create-nodegroup \
+    --cluster-name twentycrm-cluster \
+    --nodegroup-name twentycrm-nodes \
+    --subnets subnet-068eaefc740f64d7b subnet-008663bb78c888cdf \
+    --instance-types t3.medium \
+    --scaling-config minSize=1,maxSize=3,desiredSize=2 \
+    --node-role arn:aws:iam::329599648557:role/olhAI-hubGenial-eks-node-role \
+    --region sa-east-1
+```
+
+**Verificação do Status:**
+```bash
+aws eks describe-nodegroup \
+    --cluster-name twentycrm-cluster \
+    --nodegroup-name twentycrm-nodes \
+    --region sa-east-1 \
+    --query 'nodegroup.status'
+```
+
+**Resultado:**
+```json
+"ACTIVE"
+```
+
+**Configurações do Nodegroup:**
+- Tipo de instância: t3.medium
+- Escalabilidade: mínimo 1, máximo 3, desejado 2 nodes
+- Subnets: Mesmas do cluster EKS
+- Role IAM: olhAI-hubGenial-eks-node-role
 ### 1. Configuração de Variáveis de Ambiente
 - Revisar e ajustar arquivo `.env.example` no diretório `docs/architecture`
 - Definir variáveis essenciais:
