@@ -174,7 +174,40 @@ aws eks describe-cluster --name twentycrm-cluster --query "cluster.status"
 ```json
 "ACTIVE"
 ```
+### 10. Instalação e Configuração do kubectl
 
+**Download e Instalação do kubectl:**
+```bash
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+chmod +x kubectl
+sudo mv kubectl /usr/local/bin/
+```
+
+**Configuração do kubectl para o Cluster EKS:**
+```bash
+aws eks --region sa-east-1 update-kubeconfig --name twentycrm-cluster
+```
+
+**Resultado:**
+```
+Added new context arn:aws:eks:sa-east-1:329599648557:cluster/twentycrm-cluster to /home/ubuntu/.kube/config
+```
+
+**Verificação do Acesso ao Cluster:**
+```bash
+kubectl get svc
+```
+
+**Resultado:**
+```
+NAME         TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+kubernetes   ClusterIP   172.20.0.1   <none>        443/TCP   5m39s
+```
+
+**Observações Importantes:**
+- O kubectl foi instalado com sucesso
+- A configuração do cluster foi adicionada ao arquivo kubeconfig
+- O teste de conectividade com o cluster foi bem-sucedido
 ## Próximos Passos
 
 ### 1. Configuração de Variáveis de Ambiente
