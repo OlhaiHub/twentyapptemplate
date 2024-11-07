@@ -1,84 +1,94 @@
-Application Steps
+Application twentycrm Template - Progresso e Próximos Passos
 Objetivo
-Este documento descreve os passos completos que foram realizados para configurar o repositório twentyapptemplate e integrar o código do twenty como uma cópia independente. Também inclui detalhes sobre comandos específicos utilizados e explica as etapas futuras que precisam ser realizadas para completar a configuração.
+O objetivo deste projeto é criar um template para a aplicação twentycrm, que servirá como base para futuras implementações e personalizações. O template permitirá que a aplicação seja replicada de forma estruturada e configurada com facilidade, além de permitir integrações e modificações específicas dentro de uma arquitetura baseada no twentycrm.
 
-Passos Realizados
-1. Criação do Repositório Base twentyapptemplate
-Passo Inicial:
+Progresso Até o Momento
+1️⃣ Criação do Repositório Base
+Começamos o processo criando um repositório chamado twentyapptemplate no GitHub. Esse repositório foi gerado a partir de um template (hubgenial-app-repo-template) pré-configurado, fornecendo uma estrutura inicial para a aplicação.
 
-Criamos o repositório twentyapptemplate a partir de um template (hubgenial-app-repo-template), que servirá como base para a aplicação.
-Objetivo do Repositório:
+Comando Utilizado:
 
-O twentyapptemplate será a aplicação principal, que inclui o código do twenty como um componente independente. Esse repositório permite modificar o twenty de forma isolada.
-2. Fork do Repositório twenty
-Fork do Repositório Original:
+Para criar o repositório base no GitHub a partir de um template, usamos a GitHub CLI (GH CLI):
 
-Realizamos um fork do repositório twenty original para a conta OlhaiHub no GitHub. Isso permite que tenhamos uma cópia do twenty na nossa conta, que será integrada ao twentyapptemplate.
-Objetivo do Fork:
+bash
+gh repo create OlhaiHub/twentyapptemplate --template "OlhaiHub/hubgenial-app-repo-template" --public
+Esse comando cria um novo repositório twentyapptemplate na conta OlhaiHub, baseado no template especificado.
 
-Ter uma cópia completa do código para personalizações específicas do twentyapptemplate.
-3. Clonagem do Repositório twentyapptemplate e Criação da Estrutura forks/twenty
-Clone do Repositório Base:
+2️⃣ Fork do Repositório twenty
+Para incorporar o código do twenty ao nosso template, realizamos um fork do repositório twenty original para a conta OlhaiHub no GitHub.
 
-Na máquina Linux, clonamos o repositório twentyapptemplate usando o comando:
+Comando Utilizado:
+
+Para fazer o fork usando a GH CLI, utilizamos o seguinte comando:
+
 bash
 Copiar código
+gh repo fork twentyhq/twenty --clone=false
+Esse comando cria um fork do repositório twenty na nossa conta GitHub (OlhaiHub), que pode ser modificado de forma independente.
+
+3️⃣ Clonagem do Repositório twentyapptemplate e Estrutura de Diretórios
+Após a criação do repositório twentyapptemplate, clonamos o repositório em um ambiente de desenvolvimento e criamos a estrutura de diretórios para organizar o fork do twenty.
+
+Comandos Utilizados:
+
+Primeiro, clonamos o repositório twentyapptemplate:
+
+bash
 git clone git@github.com:OlhaiHub/twentyapptemplate.git
 cd twentyapptemplate
-Criação da Estrutura de Diretórios:
+Em seguida, criamos a pasta forks/twenty para isolar o código do twenty e permitir que ele seja tratado como um módulo independente:
 
-Criamos a pasta forks/twenty dentro do twentyapptemplate para receber o código do twenty:
 bash
-Copiar código
 mkdir -p forks/twenty
-4. Adição do twenty como Submódulo
-Adicionando o Submódulo:
+4️⃣ Adição do twenty como Submódulo
+Inicialmente, adicionamos o twenty como um submódulo no repositório twentyapptemplate. Essa abordagem foi adotada para incluir o código do twenty sem copiá-lo diretamente, mantendo uma referência ao repositório original.
 
-Inicialmente, configuramos o repositório twenty como submódulo para que ele fosse clonado automaticamente dentro de forks/twenty:
+Comando Utilizado:
+
+Para adicionar o repositório twenty como submódulo, utilizamos o seguinte comando:
+
 bash
-Copiar código
 git submodule add https://github.com/OlhaiHub/twenty.git forks/twenty
-Problema Identificado:
+Esse comando cria um submódulo forks/twenty vinculado ao repositório twenty, permitindo sincronizações com o repositório original.
 
-O submódulo foi adicionado, mas foi decidido que o twenty deveria ser uma cópia independente para permitir modificações sem sincronizar com o repositório original.
-5. Convertendo o twenty para uma Cópia Independente
-Remover o Submódulo:
+Desafios e Mudança de Estratégia:
+Após adicionar o twenty como submódulo, identificamos que essa abordagem não atenderia às necessidades do projeto, pois precisávamos de uma cópia independente para permitir personalizações. Decidimos, então, transformar o twenty em uma cópia direta.
 
-Para desvincular o submódulo e transformar o twenty em uma cópia independente, removemos o submódulo e mantivemos os arquivos locais:
+5️⃣ Conversão do twenty em uma Cópia Independente
+Para permitir personalizações independentes, removemos o submódulo e transformamos o conteúdo do twenty em uma cópia independente dentro do repositório twentyapptemplate.
+
+Comandos Utilizados:
+
+Primeiro, removemos o submódulo sem apagar os arquivos locais:
+
 bash
-Copiar código
 git rm -r --cached forks/twenty
 rm -rf .git/modules/forks/twenty
-Adicionar os Arquivos ao Controle de Versão:
+Em seguida, adicionamos os arquivos do twenty diretamente ao repositório twentyapptemplate:
 
-Com o submódulo removido, os arquivos do twenty agora fazem parte do repositório principal. Adicionamos esses arquivos ao controle de versão:
 bash
-Copiar código
 git add forks/twenty
 git commit -m "Converte submódulo `twenty` em uma cópia independente"
 git push origin main
-Resultado Final:
+Esses comandos removem a referência ao submódulo e transformam o twenty em uma parte integral do twentyapptemplate, permitindo personalizações sem vínculos com o repositório original.
 
-O twenty agora é uma cópia independente dentro de twentyapptemplate, permitindo que alterações sejam feitas diretamente no código sem afetar o repositório original.
-Comandos Utilizados e Suas Funções
-git clone: Clona um repositório remoto para o diretório local.
-mkdir -p <diretório>: Cria uma estrutura de diretórios.
-git submodule add: Adiciona um submódulo de outro repositório Git em um subdiretório específico.
-git rm -r --cached <diretório>: Remove um diretório do controle de versão do Git, mas mantém os arquivos locais.
-rm -rf: Comando para remover diretórios e arquivos de forma recursiva.
-git add .: Adiciona todas as mudanças ao controle de versão para serem commitadas.
-git commit -m "<mensagem>": Salva as mudanças no histórico do Git com uma mensagem descritiva.
-git push origin <branch>: Envia as mudanças para o repositório remoto na branch especificada.
 Próximos Passos
-Configuração de Variáveis de Ambiente:
+Com a base configurada e o twenty incorporado de forma independente, os próximos passos para completar o template do twentycrm incluem:
 
-Revisar e ajustar o arquivo .env.example em docs/architecture para definir variáveis específicas da aplicação.
-Implementação de Infraestrutura no AWS:
+1. Configurar Variáveis de Ambiente
+Revisar e ajustar o arquivo de variáveis de ambiente (.env.example) dentro do diretório docs/architecture. Esse arquivo definirá as variáveis de ambiente necessárias para a aplicação twentycrm, incluindo configurações de banco de dados, URLs de serviços e chaves de API.
 
-Criar e configurar o ambiente AWS EKS e PostgreSQL, conforme planejado. A infraestrutura será documentada em outro arquivo (infraestrutura.md).
-Personalizações no Código do twenty:
+2. Implementar Infraestrutura no AWS
+Provisionar a infraestrutura necessária no AWS para suportar o twentycrm. Isso inclui a criação de um cluster EKS (Elastic Kubernetes Service) para gerenciar contêineres e a configuração de uma instância EC2 para o banco de dados PostgreSQL. Ferramentas como Terraform ou AWS CLI podem ser utilizadas para automatizar o processo de criação dessa infraestrutura.
 
-Começar a fazer as personalizações necessárias na pasta forks/twenty para integrar funcionalidades específicas da aplicação.
-Documentação Contínua:
+3. Integrar Banco de Dados com Kubernetes
+Configurar a URL do PostgreSQL em um manifesto do Kubernetes para que o twentycrm possa acessar o banco de dados de forma segura. Essa etapa envolve ajustar o arquivo de manifesto do Kubernetes para definir a URL de conexão com o banco de dados e aplicar as configurações ao cluster EKS.
 
-Manter este arquivo atualizado com todos os novos passos e alterações realizadas no projeto.
+4. Personalizar o Código do twenty
+Com a infraestrutura configurada, o próximo passo é realizar personalizações no código do twenty dentro do diretório forks/twenty. Essas personalizações devem atender às necessidades específicas da aplicação twentycrm, como ajustes nas funcionalidades e interfaces para adaptá-las ao contexto do CRM.
+
+5. Documentação Contínua e Atualizações
+Durante o desenvolvimento, manter a documentação atualizada é essencial. Isso inclui registrar qualquer alteração ou configuração adicional que seja feita na infraestrutura, no código ou nas variáveis de ambiente. A documentação deve ser clara para que outros desenvolvedores possam entender e replicar o processo.
+
+Conclusão
+Até o momento, estabelecemos uma estrutura sólida para o twentycrm template, com um repositório base e o código do twenty incorporado de forma independente. Com a conclusão dos próximos passos, o twentycrm estará preparado para implementação em diferentes ambientes com a infraestrutura de suporte adequada. Esse template será essencial para futuras implementações e customizações da aplicação, proporcionando uma base confiável e bem estruturada.
