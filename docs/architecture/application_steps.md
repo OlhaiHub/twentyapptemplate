@@ -106,6 +106,26 @@ You can now run: /usr/local/bin/aws --version
 ```bash
 aws-cli/2.19.2 Python/3.12.6 Linux/6.8.0-1017-aws exe/x86_64.ubuntu.24
 ```
+
+### 7. Configuração das Credenciais AWS CLI
+
+Após a instalação do AWS CLI, configuramos as credenciais de acesso:
+
+```bash
+aws configure
+```
+
+**Configurações fornecidas:**
+- AWS Access Key ID: [CHAVE_CONFIGURADA]
+- AWS Secret Access Key: [CHAVE_SECRETA]
+- Default region name: sa-east-1
+- Default output format: json
+
+**Observações Importantes:**
+- As credenciais são armazenadas em `~/.aws/credentials`
+- A configuração regional em `~/.aws/config`
+- Nunca compartilhe ou exponha suas chaves de acesso
+
 **Observações Importantes:**
 - O AWS CLI pode ser instalado em qualquer diretório, pois o instalador configura automaticamente o PATH do sistema
 - É recomendado realizar a instalação no diretório home (~) para facilitar a limpeza posterior
