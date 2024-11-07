@@ -96,7 +96,16 @@ sudo ./aws/install
 ```bash
 aws --version
 ```
+**Confirmação da Instalação:**
+Após a instalação, o sistema confirmará com a mensagem:
+```
+You can now run: /usr/local/bin/aws --version
+```
 
+**Versão Instalada:**
+```bash
+aws-cli/2.19.2 Python/3.12.6 Linux/6.8.0-1017-aws exe/x86_64.ubuntu.24
+```
 **Observações Importantes:**
 - O AWS CLI pode ser instalado em qualquer diretório, pois o instalador configura automaticamente o PATH do sistema
 - É recomendado realizar a instalação no diretório home (~) para facilitar a limpeza posterior
