@@ -268,75 +268,84 @@ ip-10-0-2-55.sa-east-1.compute.internal    Ready    <none>   2m14s   v1.28.13-ek
 sudo apt update
 sudo apt install -y postgresql postgresql-contrib
 ```
+### 13. Configuração do Ambiente de Desenvolvimento Frontend
 
-**Configuração de Acesso Remoto:**
-1. Editar postgresql.conf:
+**Instalação de Dependências:**
 ```bash
-sudo nano /etc/postgresql/16/main/postgresql.conf
-```
-Alterar:
-```
-listen_addresses = '*'
+cd ~/twentyapptemplate/forks/twenty
+yarn install
 ```
 
-2. Editar pg_hba.conf:
+**Build do Frontend:**
 ```bash
-sudo nano /etc/postgresql/16/main/pg_hba.conf
-```
-Adicionar:
-```
-host    all    all    0.0.0.0/0    md5
+# Primeiro fazer o build
+yarn nx build twenty-front
+
+# Depois iniciar com a porta correta
+PORT=3001 yarn nx serve twenty-front
 ```
 
-3. Reiniciar o serviço:
+**Resultados do Build:**
+- Tempo de build: ~1m 14s
+- Assets gerados com sucesso
+- Servidor acessível em http://10.0.1.237:3001
+
+**Configuração do SSH:**
+```
+Host olhAI-linux
+    HostName 52.67.162.232
+    User ubuntu
+    IdentityFile ~/path/to/key.pem
+    Compression yes
+    TCPKeepAlive yes
+    ServerAliveInterval 60
+    ServerAliveCountMax 5
+```
+
+### 14. Troubleshooting e Soluções Comuns
+
+**Erro "nx not found":**
 ```bash
-sudo systemctl restart postgresql
+cd ~/twentyapptemplate/forks/twenty
+yarn install
 ```
 
-**Criação do Banco de Dados e Usuário:**
-```bash
-# Criar banco de dados
-sudo -u postgres psql -c "CREATE DATABASE twentycrm_db;"
+**Problemas de Conexão:**
+- Verificar security groups AWS
+- Confirmar IP público correto
+- Verificar logs: `journalctl -u twenty-server -f`
 
-# Criar usuário com senha
-sudo -u postgres psql -c "CREATE USER twentycrm_user WITH PASSWORD '[SENHA_SEGURA]';"
+**Warnings de Build:**
+- Warnings PURE são não-críticos e podem ser ignorados
+- Verificar compatibilidade de módulos externos
 
-# Conceder privilégios
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE twentycrm_db TO twentycrm_user;"
-```
+## Próximos Passos Atualizados
 
-**Verificações:**
-- PostgreSQL está ouvindo em todas as interfaces (0.0.0.0:5432)
-- Banco de dados twentycrm_db criado
-- Usuário twentycrm_user criado com as permissões necessárias
+### 1. Otimização de Performance
+- Análise e otimização dos tempos de build
+- Implementação de cache para assets estáticos
+- Configuração de CDN para distribuição de conteúdo
 
-### 1. Configuração de Variáveis de Ambiente
-- Revisar e ajustar arquivo `.env.example` no diretório `docs/architecture`
-- Definir variáveis essenciais:
-  - Configurações de banco de dados
-  - URLs de serviços
-  - Chaves de API
+### 2. Monitoramento e Logs
+- Implementação de sistema de logging centralizado
+- Configuração de alertas de performance
+- Definição de métricas de monitoramento
 
-### 2. Implementação da Infraestrutura AWS
-- Provisionar cluster EKS
-- Configurar instância EC2 para PostgreSQL
-- Implementar automação com Terraform/AWS CLI
+### 3. Segurança e Compliance
+- Implementação de SSL/TLS
+- Auditoria de segurança da infraestrutura
+- Revisão de políticas de acesso
 
-### 3. Integração com Kubernetes
-- Configurar URL do PostgreSQL nos manifestos
-- Estabelecer conexão segura com banco de dados
-- Aplicar configurações ao cluster EKS
-
-### 4. Personalização do Código
-- Realizar modificações no diretório `forks/twenty`
-- Adaptar funcionalidades para contexto CRM
-- Ajustar interfaces conforme necessidade
+### 4. CI/CD
+- Configuração de pipeline de deploy
+- Automação de testes
+- Implementação de rollback automatizado
 
 ### 5. Documentação e Manutenção
-- Manter registros de alterações
-- Documentar configurações de infraestrutura
-- Criar guias de implementação
+- Atualização contínua da documentação
+- Criação de guias de troubleshooting
+- Manutenção de changelog
 
 ## Conclusão
 
-O projeto estabeleceu uma estrutura sólida para o template TwentyCRM, com repositório base e código incorporado de forma independente. A conclusão dos próximos passos preparará o TwentyCRM para implementações em diferentes ambientes, fornecendo uma base confiável e bem estruturada para futuras customizações e integrações.
+O projeto evoluiu significativamente com a implementação do ambiente de desenvolvimento frontend e a resolução de questões de infraestrutura. A base está estabelecida para o desenvolvimento contínuo e a escalabilidade futura do TwentyCRM.
