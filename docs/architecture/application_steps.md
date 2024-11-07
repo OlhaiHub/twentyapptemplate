@@ -121,6 +121,27 @@ aws configure
 - Default region name: sa-east-1
 - Default output format: json
 
+### 8. Verificação e Configuração do Docker
+
+Verificamos a instalação do Docker no sistema:
+
+```bash
+sudo apt install -y docker.io
+sudo systemctl start docker
+sudo systemctl enable docker
+sudo usermod -aG docker ubuntu
+```
+
+**Resultado:**
+- Docker já estava instalado na versão 24.0.7-0ubuntu4.1
+- Serviço Docker foi iniciado e habilitado para iniciar com o sistema
+- Usuário 'ubuntu' foi adicionado ao grupo 'docker' para executar comandos sem sudo
+
+**Observações Importantes:**
+- A versão do Docker instalada é compatível com os requisitos do projeto
+- Não foi necessária uma nova instalação, apenas a configuração do serviço
+
+
 **Observações Importantes:**
 - As credenciais são armazenadas em `~/.aws/credentials`
 - A configuração regional em `~/.aws/config`
