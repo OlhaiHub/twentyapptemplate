@@ -153,6 +153,28 @@ sudo usermod -aG docker ubuntu
 - O executável do AWS CLI fica acessível globalmente após a instalação
 
 
+### 9. Criação e Configuração do Cluster EKS
+
+**Criação do Cluster:**
+```bash
+aws eks create-cluster \
+    --name twentycrm-cluster \
+    --region sa-east-1 \
+    --kubernetes-version 1.28 \
+    --role-arn arn:aws:iam::329599648557:role/olhAI-hubGenial-eks-cluster-role \
+    --resources-vpc-config "subnetIds=subnet-068eaefc740f64d7b,subnet-008663bb78c888cdf,securityGroupIds=sg-00adc9dea6db2f654"
+```
+
+**Verificação do Status:**
+```bash
+aws eks describe-cluster --name twentycrm-cluster --query "cluster.status"
+```
+
+**Resultado:**
+```json
+"ACTIVE"
+```
+
 ## Próximos Passos
 
 ### 1. Configuração de Variáveis de Ambiente
