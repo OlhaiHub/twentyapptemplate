@@ -1,3 +1,5 @@
+cat docs/architecture/application_steps.md
+cat docs/architecture/application_steps.md
 # Template TwentyCRM - Documentação de Progresso e Próximos Passos
 
 ## Objetivo
@@ -65,6 +67,41 @@ git add forks/twenty
 git commit -m "Converte submódulo 'twenty' em uma cópia independente"
 git push origin main
 ```
+// ... todo conteúdo anterior permanece igual até a seção "Conversão para Cópia Independente" ...
+
+### 6. Instalação e Configuração do AWS CLI
+
+Para preparar o ambiente para uso dos serviços AWS, instalamos o AWS CLI seguindo estes passos:
+
+**Download e Instalação Inicial:**
+```bash
+cd ~
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+```
+
+**Resolução de Dependências:**
+Encontramos que o `unzip` não estava instalado e resolvemos com:
+```bash
+sudo apt update
+sudo apt install unzip -y
+```
+
+**Extração e Instalação do AWS CLI:**
+```bash
+unzip awscliv2.zip
+sudo ./aws/install
+```
+
+**Verificação da Instalação:**
+```bash
+aws --version
+```
+
+**Observações Importantes:**
+- O AWS CLI pode ser instalado em qualquer diretório, pois o instalador configura automaticamente o PATH do sistema
+- É recomendado realizar a instalação no diretório home (~) para facilitar a limpeza posterior
+- O executável do AWS CLI fica acessível globalmente após a instalação
+
 
 ## Próximos Passos
 
