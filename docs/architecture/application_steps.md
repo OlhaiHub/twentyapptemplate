@@ -261,6 +261,55 @@ ip-10-0-2-55.sa-east-1.compute.internal    Ready    <none>   2m14s   v1.28.13-ek
 - Ambos os nodes estão com status Ready
 - Versão do Kubernetes: v1.28.13-eks-a737599
 
+### 12. Instalação e Configuração do PostgreSQL
+
+**Instalação:**
+```bash
+sudo apt update
+sudo apt install -y postgresql postgresql-contrib
+```
+
+**Configuração de Acesso Remoto:**
+1. Editar postgresql.conf:
+```bash
+sudo nano /etc/postgresql/16/main/postgresql.conf
+```
+Alterar:
+```
+listen_addresses = '*'
+```
+
+2. Editar pg_hba.conf:
+```bash
+sudo nano /etc/postgresql/16/main/pg_hba.conf
+```
+Adicionar:
+```
+host    all    all    0.0.0.0/0    md5
+```
+
+3. Reiniciar o serviço:
+```bash
+sudo systemctl restart postgresql
+```
+
+**Criação do Banco de Dados e Usuário:**
+```bash
+# Criar banco de dados
+sudo -u postgres psql -c "CREATE DATABASE twentycrm_db;"
+
+# Criar usuário com senha
+sudo -u postgres psql -c "CREATE USER twentycrm_user WITH PASSWORD '[SENHA_SEGURA]';"
+
+# Conceder privilégios
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE twentycrm_db TO twentycrm_user;"
+```
+
+**Verificações:**
+- PostgreSQL está ouvindo em todas as interfaces (0.0.0.0:5432)
+- Banco de dados twentycrm_db criado
+- Usuário twentycrm_user criado com as permissões necessárias
+
 ### 1. Configuração de Variáveis de Ambiente
 - Revisar e ajustar arquivo `.env.example` no diretório `docs/architecture`
 - Definir variáveis essenciais:
