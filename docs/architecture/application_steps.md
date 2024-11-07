@@ -242,6 +242,8 @@ aws eks describe-nodegroup \
 - Escalabilidade: mínimo 1, máximo 3, desejado 2 nodes
 - Subnets: Mesmas do cluster EKS
 - Role IAM: olhAI-hubGenial-eks-node-role
+
+
 ### 1. Configuração de Variáveis de Ambiente
 - Revisar e ajustar arquivo `.env.example` no diretório `docs/architecture`
 - Definir variáveis essenciais:
