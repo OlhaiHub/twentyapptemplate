@@ -1,0 +1,3 @@
+[submodule "forks/twenty"]
+	path = forks/twenty
+	url = https://github.com/OlhaiHub/twenty.git
