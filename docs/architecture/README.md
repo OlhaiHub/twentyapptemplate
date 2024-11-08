@@ -1,187 +1,204 @@
-## Architecture Diagrams
-
-### Infrastructure Architecture
 ```mermaid
 graph TB
-    %% Internet Gateway
-    INTERNET((Internet)) --> ALB
+    %% Global DNS and User Access
+    USERS((Internet Users))
+    USERS --> DEV_R53 & QA_R53 & PROD_R53
 
-    subgraph AWS["AWS Cloud"]
-        subgraph NET["1-NETWORK LAYER"]
-            subgraph VPC["NET-001: VPC (10.0.0.0/16)"]
-                ALB["NET-002: Application Load Balancer"]
+    %% DEVELOPMENT ENVIRONMENT
+    subgraph DEV["DEVELOPMENT - mGenialDev.olhai.app.br"]
+        DEV_R53["DNS-101: Route53 Zone"] --> DEV_ACM["DNS-102: ACM SSL"]
+        DEV_ACM --> DEV_ALB["ALB-101: Load Balancer"]
+        
+        subgraph DEV_VPC["VPC-101: Dev VPC (10.0.0.0/16)"]
+            %% Network Components
+            DEV_IGW["NET-101: Internet Gateway"]
+            DEV_NAT["NET-102: NAT Gateway"]
+            
+            subgraph DEV_NET["NET-200: Network"]
+                DEV_PUB1["NET-201: Public-1A<br/>10.0.1.0/24"]
+                DEV_PUB2["NET-202: Public-1B<br/>10.0.2.0/24"]
+                DEV_PRIV1["NET-203: Private-1A<br/>10.0.3.0/24"]
+                DEV_PRIV2["NET-204: Private-1B<br/>10.0.4.0/24"]
                 
-                subgraph PUB["NET-100: Public Subnets"]
-                    PUB1["NET-101: Public-1A<br/>10.0.1.0/24"]
-                    PUB2["NET-102: Public-1B<br/>10.0.2.0/24"]
-                end
+                DEV_RT_PUB["NET-205: Public Routes"]
+                DEV_RT_PRIV["NET-206: Private Routes"]
+            end
+
+            subgraph DEV_EKS["EKS-100: Dev Cluster v1.27"]
+                DEV_CP["EKS-101: Control Plane"]
                 
-                subgraph PRIV["NET-200: Private Subnets"]
-                    PRIV1["NET-201: Private-1A<br/>10.0.3.0/24"]
-                    PRIV2["NET-202: Private-1B<br/>10.0.4.0/24"]
+                subgraph DEV_NODES["EKS-200: Node Groups"]
+                    DEV_FNG["Frontend Nodes<br/>t3.medium x2<br/>Min: 2, Max: 4"]
+                    DEV_BNG["Backend Nodes<br/>t3.large x2<br/>Min: 2, Max: 4"]
                 end
-                
-                subgraph GW["NET-300: Gateways"]
-                    IGW["NET-301: Internet Gateway"]
-                    NAT["NET-302: NAT Gateway"]
+
+                subgraph DEV_K8S["EKS-300: K8s Resources"]
+                    DEV_NS["twenty-dev Namespace"]
+                    DEV_F_SVC["Frontend Service: 3001"]
+                    DEV_B_SVC["Backend Service: 3000"]
+                    DEV_CM["ConfigMaps"]
+                    DEV_SEC["Secrets"]
                 end
             end
-        end
-
-        subgraph SEC["2-SECURITY LAYER"]
-            subgraph SG["SEC-100: Security Groups"]
-                ALB_SG["SEC-101: ALB SG<br/>80,443"]
-                EKS_SG["SEC-102: EKS SG<br/>443,10250"]
-                NODE_SG["SEC-103: Node SG"]
-            end
             
-            subgraph IAM["SEC-200: IAM"]
-                CLUSTER_ROLE["SEC-201: Cluster Role"]
-                NODE_ROLES["SEC-202: Node Roles"]
-                SA_ROLES["SEC-203: Service Accounts"]
-            end
-            
-            subgraph KMS["SEC-300: Encryption"]
-                EKS_KEY["SEC-301: EKS Key"]
-                EBS_KEY["SEC-302: EBS Key"]
-                SEC_KEY["SEC-303: Secrets Key"]
+            subgraph DEV_DB["DB-100: Database"]
+                DEV_EC2["EC2 t3.large<br/>Ubuntu 20.04"]
+                DEV_PG["PostgreSQL 13<br/>+ pg_graphql<br/>+ uuid-ossp"]
+                DEV_VOL["GP3 50GB Volume"]
             end
         end
 
-        subgraph EKS["3-EKS CLUSTER"]
-            CP["EKS-001: Control Plane"]
-            
-            subgraph NG["EKS-100: Node Groups"]
-                FNG["EKS-101: Frontend Nodes<br/>t3.medium x2"]
-                BNG["EKS-102: Backend Nodes<br/>t3.large x2"]
-                DNG["EKS-103: Database Node<br/>t3.xlarge x1"]
-            end
-            
-            subgraph K8S["EKS-200: Kubernetes Resources"]
-                NS["EKS-201: Namespaces"]
-                ING["EKS-202: Ingress"]
-                HPA["EKS-203: AutoScaling"]
-            end
-        end
-
-        subgraph APP["4-APPLICATION LAYER"]
-            subgraph FRONT["APP-100: Frontend Tier"]
-                F_DEPLOY["APP-101: Frontend Deployment"]
-                F_SVC["APP-102: Frontend Service"]
-                F_CONFIG["APP-103: Frontend Config"]
-            end
-            
-            subgraph BACK["APP-200: Backend Tier"]
-                B_DEPLOY["APP-201: Backend Deployment"]
-                B_SVC["APP-202: Backend Service"]
-                B_CONFIG["APP-203: Backend Config"]
-            end
-            
-            subgraph DB["APP-300: Database Tier"]
-                DB_SS["APP-301: PostgreSQL StatefulSet"]
-                DB_SVC["APP-302: Database Service"]
-                DB_VOL["APP-303: Persistent Volume"]
-            end
-        end
-
-        subgraph MON["5-MONITORING LAYER"]
-            CW["MON-100: CloudWatch"]
-            PROM["MON-200: Prometheus"]
-            GRAF["MON-300: Grafana"]
-            ALERT["MON-400: Alerting"]
-        end
-
-        subgraph DNS["6-DNS LAYER"]
-            R53["DNS-100: Route 53"]
-            CERT["DNS-200: ACM Certificate"]
-            DOMAIN["DNS-300: mGenialdev.olhai.app.br"]
+        subgraph DEV_MONITOR["MON-100: Monitoring"]
+            DEV_CW["CloudWatch Logs"]
+            DEV_PROM["Prometheus"]
+            DEV_GRAF["Grafana"]
+            DEV_ALERT["Alerts"]
         end
     end
 
-    %% Define relationships
-    ALB --> FNG & BNG
-    FNG & BNG & DNG --> CP
-    
-    F_DEPLOY --> FNG
-    B_DEPLOY --> BNG
-    DB_SS --> DNG
-    
-    CW --> EKS
-    PROM --> K8S
-    
-    DOMAIN --> ALB
+    %% QA ENVIRONMENT
+    subgraph QA["QA - mGenialQA.olhai.app.br"]
+        QA_R53["DNS-201: Route53 Zone"] --> QA_ACM["DNS-202: ACM SSL"]
+        QA_ACM --> QA_ALB["ALB-201: Load Balancer"]
+        
+        subgraph QA_VPC["VPC-201: QA VPC (10.1.0.0/16)"]
+            %% Network Components
+            QA_IGW["NET-201: Internet Gateway"]
+            QA_NAT["NET-202: NAT Gateway"]
+            
+            subgraph QA_NET["NET-300: Network"]
+                QA_PUB1["NET-301: Public-1A<br/>10.1.1.0/24"]
+                QA_PUB2["NET-302: Public-1B<br/>10.1.2.0/24"]
+                QA_PRIV1["NET-303: Private-1A<br/>10.1.3.0/24"]
+                QA_PRIV2["NET-304: Private-1B<br/>10.1.4.0/24"]
+                
+                QA_RT_PUB["NET-305: Public Routes"]
+                QA_RT_PRIV["NET-306: Private Routes"]
+            end
 
-    classDef network fill:#E6F3FF,stroke:#3182CE
-    classDef security fill:#FED7D7,stroke:#E53E3E
-    classDef eks fill:#C6F6D5,stroke:#38A169
-    classDef app fill:#E9D8FD,stroke:#805AD5
-    classDef monitoring fill:#FEEBC8,stroke:#DD6B20
-    classDef dns fill:#E2E8F0,stroke:#4A5568
+            subgraph QA_EKS["EKS-400: QA Cluster v1.27"]
+                QA_CP["EKS-401: Control Plane"]
+                
+                subgraph QA_NODES["EKS-500: Node Groups"]
+                    QA_FNG["Frontend Nodes<br/>t3.medium x2<br/>Min: 2, Max: 4"]
+                    QA_BNG["Backend Nodes<br/>t3.large x2<br/>Min: 2, Max: 4"]
+                end
 
-    class NET,VPC,PUB,PRIV,GW,ALB network
-    class SEC,SG,IAM,KMS security
-    class EKS,CP,NG,K8S eks
-    class APP,FRONT,BACK,DB app
-    class MON,CW,PROM,GRAF,ALERT monitoring
-    class DNS,R53,CERT,DOMAIN dns
+                subgraph QA_K8S["EKS-600: K8s Resources"]
+                    QA_NS["twenty-qa Namespace"]
+                    QA_F_SVC["Frontend Service: 3001"]
+                    QA_B_SVC["Backend Service: 3000"]
+                    QA_CM["ConfigMaps"]
+                    QA_SEC["Secrets"]
+                end
+            end
+            
+            subgraph QA_DB["DB-200: Database"]
+                QA_EC2["EC2 t3.large<br/>Ubuntu 20.04"]
+                QA_PG["PostgreSQL 13<br/>+ pg_graphql<br/>+ uuid-ossp"]
+                QA_VOL["GP3 50GB Volume"]
+            end
+        end
+
+        subgraph QA_MONITOR["MON-200: Monitoring"]
+            QA_CW["CloudWatch Logs"]
+            QA_PROM["Prometheus"]
+            QA_GRAF["Grafana"]
+            QA_ALERT["Alerts"]
+        end
+    end
+
+    %% PRODUCTION ENVIRONMENT
+    subgraph PROD["PRODUCTION - mGenial.olhai.app.br"]
+        PROD_R53["DNS-301: Route53 Zone"] --> PROD_ACM["DNS-302: ACM SSL"]
+        PROD_ACM --> PROD_ALB["ALB-301: Load Balancer"]
+        
+        subgraph PROD_VPC["VPC-301: Prod VPC (10.2.0.0/16)"]
+            %% Network Components
+            PROD_IGW["NET-301: Internet Gateway"]
+            PROD_NAT["NET-302: NAT Gateway"]
+            
+            subgraph PROD_NET["NET-400: Network"]
+                PROD_PUB1["NET-401: Public-1A<br/>10.2.1.0/24"]
+                PROD_PUB2["NET-402: Public-1B<br/>10.2.2.0/24"]
+                PROD_PRIV1["NET-403: Private-1A<br/>10.2.3.0/24"]
+                PROD_PRIV2["NET-404: Private-1B<br/>10.2.4.0/24"]
+                
+                PROD_RT_PUB["NET-405: Public Routes"]
+                PROD_RT_PRIV["NET-406: Private Routes"]
+            end
+
+            subgraph PROD_EKS["EKS-700: Prod Cluster v1.27"]
+                PROD_CP["EKS-701: Control Plane"]
+                
+                subgraph PROD_NODES["EKS-800: Node Groups"]
+                    PROD_FNG["Frontend Nodes<br/>t3.large x3<br/>Min: 3, Max: 6"]
+                    PROD_BNG["Backend Nodes<br/>t3.xlarge x3<br/>Min: 3, Max: 6"]
+                end
+
+                subgraph PROD_K8S["EKS-900: K8s Resources"]
+                    PROD_NS["twenty-prod Namespace"]
+                    PROD_F_SVC["Frontend Service: 3001"]
+                    PROD_B_SVC["Backend Service: 3000"]
+                    PROD_CM["ConfigMaps"]
+                    PROD_SEC["Secrets"]
+                end
+            end
+            
+            subgraph PROD_DB["DB-300: Database"]
+                PROD_EC2["EC2 t3.xlarge<br/>Ubuntu 20.04"]
+                PROD_PG["PostgreSQL 13<br/>+ pg_graphql<br/>+ uuid-ossp"]
+                PROD_VOL["GP3 100GB Volume"]
+            end
+        end
+
+        subgraph PROD_MONITOR["MON-300: Monitoring"]
+            PROD_CW["CloudWatch Logs"]
+            PROD_PROM["Prometheus"]
+            PROD_GRAF["Grafana"]
+            PROD_ALERT["Alerts"]
+        end
+    end
+
+    %% Security Groups
+    subgraph SECURITY["Security Configuration"]
+        subgraph DEV_SEC["DEV Security"]
+            DEV_SG_ALB["ALB SG: 80,443"]
+            DEV_SG_EKS["EKS SG: 443,10250"]
+            DEV_SG_DB["DB SG: 5432"]
+        end
+
+        subgraph QA_SEC["QA Security"]
+            QA_SG_ALB["ALB SG: 80,443"]
+            QA_SG_EKS["EKS SG: 443,10250"]
+            QA_SG_DB["DB SG: 5432"]
+        end
+
+        subgraph PROD_SEC["PROD Security"]
+            PROD_SG_ALB["ALB SG: 80,443"]
+            PROD_SG_EKS["EKS SG: 443,10250"]
+            PROD_SG_DB["DB SG: 5432"]
+        end
+    end
+
+    %% Style Definitions
+    classDef dev fill:#E6F3FF,stroke:#3182CE
+    classDef qa fill:#C6F6D5,stroke:#38A169
+    classDef prod fill:#FED7D7,stroke:#E53E3E
+    classDef security fill:#FEEBC8,stroke:#DD6B20
+    classDef monitoring fill:#E9D8FD,stroke:#805AD5
+
+    %% Apply Styles
+    class DEV,DEV_VPC,DEV_NET,DEV_EKS,DEV_DB,DEV_MONITOR dev
+    class QA,QA_VPC,QA_NET,QA_EKS,QA_DB,QA_MONITOR qa
+    class PROD,PROD_VPC,PROD_NET,PROD_EKS,PROD_DB,PROD_MONITOR prod
+    class SECURITY,DEV_SEC,QA_SEC,PROD_SEC security
 ```
 
-### Deployment Workflow
-```mermaid
-sequenceDiagram
-    participant NET as Network Layer
-    participant SEC as Security Layer
-    participant COMP as Compute Layer
-    participant APP as Application Layer
-    participant MON as Monitoring Layer
-    participant DNS as DNS Layer
+Would you like me to:
+1. Break this down into smaller, more manageable sections?
+2. Add more component details?
+3. Create separate diagrams for specific subsystems?
+4. Add relationships between components?
 
-    Note over NET: Phase 1: Network Foundation
-    NET->>NET: NET-001: Create VPC
-    NET->>NET: NET-100: Configure Public Subnets
-    NET->>NET: NET-200: Configure Private Subnets
-    NET->>NET: NET-300: Setup Routing (IGW, NAT)
-    NET->>NET: NET-400: Configure NACLs
-
-    Note over SEC: Phase 2: Security Configuration
-    SEC->>SEC: SEC-100: Create Security Groups
-    SEC->>SEC: SEC-200: Setup IAM Roles/Policies
-    SEC->>SEC: SEC-300: Configure Secrets Management
-
-    Note over COMP: Phase 3: Compute Resources
-    COMP->>COMP: COMP-100: Launch EC2 Instance
-    COMP->>COMP: COMP-200: Setup Docker Platform
-    
-    Note over APP: Phase 4: Application Deployment
-    APP->>APP: APP-100: Deploy Containers
-    APP->>APP: APP-200: Configure Applications
-    
-    Note over MON: Phase 5: Monitoring Setup
-    MON->>MON: MON-100: Enable CloudWatch
-    MON->>MON: MON-200: Setup Logging
-    MON->>MON: MON-300: Configure Alerts
-    
-    Note over DNS: Phase 6: DNS Configuration
-    DNS->>DNS: DNS-100: Configure Route53
-    DNS->>DNS: DNS-200: Create Records
-
-    Note over NET,DNS: Implementation Complete
-```
-
-The infrastructure architecture diagram shows the AWS components and their relationships within the deployment, including:
-- VPC and subnet configuration
-- EC2 instance with Docker containers
-- Security group rules
-- Network components (IGW, NAT, Route Tables)
-- DNS configuration
-
-The deployment workflow diagram illustrates the sequential steps of the deployment process:
-1. Initial script execution
-2. Security group creation
-3. EC2 instance launch
-4. System configuration
-5. Docker setup
-6. Application deployment
-7. DNS configuration
-
-These visual representations help understand both the static infrastructure and the dynamic deployment process of the TwentyCRM development environment.
+The above Mermaid diagram provides a complete view of the infrastructure, but it might be better to break it down into smaller, focused diagrams for better readability and manageability.
