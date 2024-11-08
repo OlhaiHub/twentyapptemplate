@@ -137,9 +137,171 @@ graph TB
     class PROD,PROD_VPC,PROD_NET,PROD_EKS,PROD_DB prod
 ```
 
-[Would you like me to continue with the next sections? There's quite a bit more to cover, including:
-1. Network Flow Diagrams
+## Network Architecture
+
+### Network Flow Pattern
+```mermaid
+graph TB
+    subgraph NETWORK_FLOW["Network Flow Configuration"]
+        subgraph INGRESS_FLOW["Ingress Traffic"]
+            R53["Route53<br/>- DNS Resolution<br/>- Health Checks<br/>- Failover Config"]
+            WAF["WAF Rules<br/>- Rate Limiting: 10k/min<br/>- IP Filtering<br/>- SQL Injection Protection"]
+            ALB["Load Balancer<br/>- SSL Termination<br/>- Path Routing<br/>- Health Check: 30s"]
+        end
+
+        subgraph SERVICE_FLOW["Service Communication"]
+            MESH["Service Mesh<br/>- Traffic Control<br/>- mTLS<br/>- Authorization"]
+            CNI["AWS CNI<br/>- Pod Networking<br/>- Security Groups<br/>- IP Management"]
+            POLICY["Network Policies<br/>- Ingress Rules<br/>- Egress Rules<br/>- CIDR Blocks"]
+        end
+
+        subgraph EGRESS_FLOW["Egress Traffic"]
+            NAT["NAT Gateway<br/>- IP Management<br/>- High Availability"]
+            ENDPOINT["VPC Endpoints<br/>- S3 Access<br/>- ECR Access"]
+            PROXY["Egress Proxy<br/>- URL Filtering<br/>- Access Logs"]
+        end
+    end
+
+    classDef ingress fill:#E6F3FF,stroke:#3182CE
+    classDef service fill:#C6F6D5,stroke:#38A169
+    classDef egress fill:#FED7D7,stroke:#E53E3E
+
+    class INGRESS_FLOW,R53,WAF,ALB ingress
+    class SERVICE_FLOW,MESH,CNI,POLICY service
+    class EGRESS_FLOW,NAT,ENDPOINT,PROXY egress
+```
+
+## Security Architecture
+
+```mermaid
+graph TB
+    subgraph SECURITY["Security Architecture"]
+        subgraph ACCESS_CONTROL["Access Control"]
+            subgraph IAM_CONFIG["IAM Configuration"]
+                ROLES["IAM Roles<br/>- EKS Cluster Role<br/>- Node Group Role<br/>- Service Account Role"]
+                POLICIES["IAM Policies<br/>- Least Privilege<br/>- Resource Access<br/>- Service Boundaries"]
+            end
+
+            subgraph K8S_AUTH["Kubernetes Auth"]
+                RBAC["RBAC Config<br/>- ClusterRoles<br/>- RoleBindings"]
+                SA["Service Accounts<br/>- Pod Identity<br/>- IRSA Integration"]
+            end
+        end
+
+        subgraph NETWORK_SEC["Network Security"]
+            subgraph SG_CONFIG["Security Groups"]
+                ALB_SG["ALB Security Group<br/>- 80/443 Inbound<br/>- VPC CIDR Outbound"]
+                EKS_SG["EKS Security Group<br/>- Control Plane: 443<br/>- Node Comm: 10250"]
+                DB_SG["DB Security Group<br/>- Postgres: 5432<br/>- Source: EKS SG"]
+            end
+        end
+
+        subgraph DATA_SEC["Data Security"]
+            subgraph ENCRYPTION["Encryption"]
+                AT_REST["At Rest<br/>- EBS Encryption<br/>- Secrets Encryption"]
+                IN_TRANSIT["In Transit<br/>- TLS 1.2/1.3<br/>- mTLS"]
+            end
+        end
+    end
+
+    classDef access fill:#E6F3FF,stroke:#3182CE
+    classDef network fill:#C6F6D5,stroke:#38A169
+    classDef data fill:#FED7D7,stroke:#E53E3E
+
+    class ACCESS_CONTROL,IAM_CONFIG,K8S_AUTH access
+    class NETWORK_SEC,SG_CONFIG network
+    class DATA_SEC,ENCRYPTION data
+```
+
+## Monitoring and Backup
+
+```mermaid
+graph TB
+    subgraph MONITORING["Monitoring Architecture"]
+        subgraph METRICS["Metrics Collection"]
+            CW["CloudWatch<br/>- Resource Metrics<br/>- Custom Metrics<br/>- Alarms"]
+            PROM["Prometheus<br/>- Pod Metrics<br/>- Node Metrics"]
+            GRAF["Grafana<br/>- Dashboards<br/>- Alerts"]
+        end
+
+        subgraph LOGGING["Log Management"]
+            CW_LOGS["CloudWatch Logs<br/>- Application Logs<br/>- System Logs"]
+            FLUENT["Fluent Bit<br/>- Log Collection<br/>- Parsing"]
+            ES["OpenSearch<br/>- Log Analytics"]
+        end
+
+        subgraph BACKUP["Backup Strategy"]
+            subgraph DB_BACKUP["Database Backup"]
+                DAILY["Daily Snapshots<br/>DEV/QA: 7 days<br/>PROD: 30 days"]
+                POINT["Point-in-Time<br/>Recovery Window:<br/>PROD: 35 days"]
+            end
+
+            subgraph STORAGE["Backup Storage"]
+                S3["S3 Storage<br/>- Standard Tier<br/>- Lifecycle Rules"]
+                GLACIER["Glacier<br/>- Archive Storage<br/>- 1 year retention"]
+            end
+        end
+    end
+
+    classDef metrics fill:#E6F3FF,stroke:#3182CE
+    classDef logging fill:#C6F6D5,stroke:#38A169
+    classDef backup fill:#FED7D7,stroke:#E53E3E
+
+    class METRICS,CW,PROM,GRAF metrics
+    class LOGGING,CW_LOGS,FLUENT,ES logging
+    class BACKUP,DB_BACKUP,STORAGE backup
+```
+
+## CI/CD Pipeline
+
+```mermaid
+graph TB
+    subgraph CICD["CI/CD Pipeline"]
+        subgraph SOURCE["Source"]
+            GIT["GitHub Repository"]
+            BRANCH["Branch Strategy<br/>- main<br/>- develop<br/>- feature/*"]
+        end
+
+        subgraph BUILD["Build Phase"]
+            TEST["Testing<br/>- Unit Tests<br/>- Integration Tests"]
+            SCAN["Security Scan<br/>- SonarQube<br/>- SAST"]
+            DOCKER["Docker Build<br/>- Multi-stage<br/>- Security Scan"]
+        end
+
+        subgraph DEPLOY["Deployment"]
+            DEV["DEV Environment<br/>- Auto Deploy<br/>- Smoke Tests"]
+            QA["QA Environment<br/>- Manual Approval<br/>- Full Tests"]
+            PROD["PROD Environment<br/>- Manual Approval<br/>- Canary Deploy"]
+        end
+    end
+
+    classDef source fill:#E6F3FF,stroke:#3182CE
+    classDef build fill:#C6F6D5,stroke:#38A169
+    classDef deploy fill:#FED7D7,stroke:#E53E3E
+
+    class SOURCE,GIT,BRANCH source
+    class BUILD,TEST,SCAN,DOCKER build
+    class DEPLOY,DEV,QA,PROD deploy
+```
+
+## Implementation Guide
+
+### Prerequisites
+- AWS CLI configured
+- kubectl installed
+- Terraform installed (optional)
+- Access to AWS Account with required permissions
+
+### Implementation Steps
+1. Network Setup
 2. Security Configuration
-3. Monitoring Setup
-4. Implementation Instructions
-5. Troubleshooting Guide]
+3. EKS Cluster Deployment
+4. Database Setup
+5. Application Deployment
+6. Monitoring Configuration
+
+[Would you like me to continue with:
+1. Detailed implementation steps
+2. Configuration examples
+3. Troubleshooting guide
+4. Maintenance procedures?]
