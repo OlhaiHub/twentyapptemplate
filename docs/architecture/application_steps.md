@@ -1,4 +1,7 @@
-```
+## Architecture Diagrams
+
+### Infrastructure Architecture
+```mermaid
 graph TB
     subgraph AWS_Cloud["AWS Cloud"]
         subgraph VPC["VPC (10.0.0.0/16)"]
@@ -42,8 +45,6 @@ graph TB
     DOMAIN --> EC2
 
     classDef vpc fill:#e4f0f8,stroke:#336
-
-```
     classDef subnet fill:#f4f4f4,stroke:#666
     classDef ec2 fill:#f9eee3,stroke:#663
     classDef network fill:#e3f9e3,stroke:#363
@@ -56,3 +57,57 @@ graph TB
     class Network,IGW,NAT,RT,NACL network
     class Security,SG security
     class DNS,R53,DOMAIN dns
+
+### Deployment Workflow
+```mermaid
+[Second Mermaid Diagram Above]
+```
+sequenceDiagram
+    participant U as User
+    participant AWS as AWS CLI
+    participant EC2 as EC2 Instance
+    participant D as Docker
+    participant R53 as Route 53
+
+    U->>AWS: Run deployment script
+    AWS->>AWS: Create Security Group
+    Note over AWS: Configure inbound rules<br/>for ports 22, 80, 443, 5432
+    
+    AWS->>EC2: Launch t3.medium instance
+    Note over EC2: Ubuntu 20.04 LTS<br/>20GB GP2 Storage
+    
+    EC2->>EC2: Run user-data script
+    Note over EC2: Update system<br/>Install dependencies
+    
+    EC2->>D: Install Docker & Docker Compose
+    
+    EC2->>EC2: Clone Twenty repository
+    EC2->>EC2: Create .env file
+    
+    D->>D: Pull required images
+    D->>D: Start containers
+    Note over D: PostgreSQL<br/>Application containers
+    
+    AWS->>R53: Update DNS record
+    Note over R53: Point mGenialdev.olhai.app.br<br/>to EC2 public IP
+    
+    R53-->>U: DNS propagation complete
+    EC2-->>U: Application ready
+
+The infrastructure architecture diagram shows the AWS components and their relationships within the deployment, including:
+- VPC and subnet configuration
+- EC2 instance with Docker containers
+- Security group rules
+- Network components (IGW, NAT, Route Tables)
+- DNS configuration
+
+The deployment workflow diagram illustrates the sequential steps of the deployment process:
+1. Initial script execution
+2. Security group creation
+3. EC2 instance launch
+4. System configuration
+5. Docker setup
+6. Application deployment
+7. DNS configuration
+
+These visual representations help understand both the static infrastructure and the dynamic deployment process of the TwentyCRM development environment.
