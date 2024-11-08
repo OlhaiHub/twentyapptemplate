@@ -1,0 +1,299 @@
+## Advanced Operations Guide
+
+### 1. Detailed Monitoring Configuration
+
+#### Prometheus Configuration
+```yaml
+# prometheus-config.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: twenty-prometheus
+  namespace: monitoring
+spec:
+  serviceAccountName: prometheus
+  podMonitorSelector:
+    matchLabels:
+      app: twenty
+  resources:
+    requests:
+      memory: 400Mi
+      cpu: 200m
+    limits:
+      memory: 800Mi
+      cpu: 500m
+  retention: 15d
+  serviceMonitorSelector:
+    matchLabels:
+      team: twenty
+  additionalScrapeConfigs:
+    - job_name: 'postgresql'
+      static_configs:
+        - targets: ['postgres:5432']
+    - job_name: 'node-exporter'
+      kubernetes_sd_configs:
+        - role: node
+```
+
+#### Grafana Dashboards
+```json
+{
+  "dashboard": {
+    "id": null,
+    "title": "TwentyCRM Overview",
+    "tags": ["twenty", "production"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "title": "API Response Time",
+        "type": "graph",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "95th Percentile"
+          }
+        ]
+      },
+      {
+        "title": "Database Connections",
+        "type": "gauge",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "pg_stat_activity_count",
+            "legendFormat": "Active Connections"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### 2. Security Audit Procedures
+
+```mermaid
+graph TB
+    subgraph SECURITY_AUDIT["Security Audit Process"]
+        subgraph ACCESS_REVIEW["Access Review"]
+            IAM["IAM Audit<br/>- Role Permissions<br/>- User Access<br/>- Policy Review"]
+            K8S["Kubernetes Audit<br/>- RBAC Policies<br/>- Service Accounts<br/>- Pod Security"]
+            DB["Database Audit<br/>- User Permissions<br/>- Connection Security<br/>- Encryption"]
+        end
+
+        subgraph NETWORK_REVIEW["Network Security"]
+            SG["Security Groups<br/>- Inbound Rules<br/>- Outbound Rules<br/>- Rule Usage"]
+            VPC["VPC Audit<br/>- Flow Logs<br/>- Endpoint Security<br/>- NACL Review"]
+            SSL["SSL/TLS Review<br/>- Certificate Validity<br/>- Protocol Versions<br/>- Cipher Suites"]
+        end
+
+        subgraph COMPLIANCE["Compliance Check"]
+            LOG["Logging Review<br/>- Audit Logs<br/>- Access Logs<br/>- Error Logs"]
+            SEC["Security Standards<br/>- CIS Benchmarks<br/>- AWS Best Practices<br/>- Custom Policies"]
+        end
+    end
+
+    classDef access fill:#E6F3FF,stroke:#3182CE
+    classDef network fill:#C6F6D5,stroke:#38A169
+    classDef compliance fill:#FED7D7,stroke:#E53E3E
+
+    class ACCESS_REVIEW,IAM,K8S,DB access
+    class NETWORK_REVIEW,SG,VPC,SSL network
+    class COMPLIANCE,LOG,SEC compliance
+```
+
+#### Security Audit Script
+```bash
+#!/bin/bash
+# security-audit.sh
+
+echo "Starting Security Audit..."
+
+# IAM Audit
+echo "Checking IAM configurations..."
+aws iam get-credential-report
+aws iam list-users --query 'Users[?PasswordLastUsed<=`2024-01-01`]'
+aws iam list-access-keys --query 'AccessKeyMetadata[?CreateDate<=`2024-01-01`]'
+
+# Security Group Audit
+echo "Auditing Security Groups..."
+aws ec2 describe-security-groups --query 'SecurityGroups[*].[GroupId,GroupName,IpPermissions]'
+
+# EKS Security Audit
+echo "Checking EKS security configurations..."
+kubectl auth can-i --list
+kubectl get psp
+kubectl get networkpolicy --all-namespaces
+
+# Database Security Check
+echo "Checking Database security..."
+PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d $DB_NAME -c "SELECT * FROM pg_user;"
+PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d $DB_NAME -c "SELECT * FROM pg_hba_file_rules;"
+```
+
+### 3. Performance Optimization Guide
+
+#### Database Optimization
+```sql
+-- PostgreSQL Configuration Optimizations
+ALTER SYSTEM SET shared_buffers = '4GB';
+ALTER SYSTEM SET work_mem = '64MB';
+ALTER SYSTEM SET maintenance_work_mem = '256MB';
+ALTER SYSTEM SET effective_cache_size = '12GB';
+ALTER SYSTEM SET max_connections = '200';
+
+-- Index Optimization
+CREATE INDEX CONCURRENTLY idx_users_email ON users(email);
+CREATE INDEX CONCURRENTLY idx_activities_date ON activities(created_at);
+
+-- Query Optimization
+EXPLAIN ANALYZE
+SELECT * FROM users 
+JOIN activities ON users.id = activities.user_id
+WHERE activities.created_at >= NOW() - INTERVAL '7 days';
+```
+
+#### Kubernetes Resource Optimization
+```yaml
+# HPA Configuration
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: twenty-backend-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: twenty-backend
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+    scaleUp:
+      stabilizationWindowSeconds: 60
+```
+
+### 4. Advanced Recovery Procedures
+
+```mermaid
+graph TB
+    subgraph DR_PROCEDURES["Disaster Recovery Procedures"]
+        subgraph FAILOVER["Database Failover"]
+            F1["Stop Applications"]
+            F2["Promote Replica"]
+            F3["Update Endpoints"]
+            F4["Verify Data"]
+            F5["Resume Applications"]
+        end
+
+        subgraph BACKUP["Backup Recovery"]
+            B1["Select Backup Point"]
+            B2["Restore Database"]
+            B3["Apply WAL Logs"]
+            B4["Verify Integrity"]
+            B5["Update Applications"]
+        end
+
+        subgraph CLUSTER["Cluster Recovery"]
+            C1["New EKS Cluster"]
+            C2["Node Groups"]
+            C3["Apply Configs"]
+            C4["Verify Services"]
+            C5["Update DNS"]
+        end
+    end
+
+    F1 --> F2 --> F3 --> F4 --> F5
+    B1 --> B2 --> B3 --> B4 --> B5
+    C1 --> C2 --> C3 --> C4 --> C5
+
+    classDef failover fill:#E6F3FF,stroke:#3182CE
+    classDef backup fill:#C6F6D5,stroke:#38A169
+    classDef cluster fill:#FED7D7,stroke:#E53E3E
+
+    class FAILOVER,F1,F2,F3,F4,F5 failover
+    class BACKUP,B1,B2,B3,B4,B5 backup
+    class CLUSTER,C1,C2,C3,C4,C5 cluster
+```
+
+#### Recovery Automation Script
+```bash
+#!/bin/bash
+# disaster-recovery.sh
+
+set -e
+
+# Configuration
+BACKUP_BUCKET="twenty-backups"
+BACKUP_DATE=$(date +%Y%m%d)
+CLUSTER_NAME="twenty-prod-cluster"
+REGION="sa-east-1"
+
+# 1. Infrastructure Recovery
+create_infrastructure() {
+    echo "Creating new infrastructure..."
+    terraform init
+    terraform apply -var="environment=dr" -auto-approve
+}
+
+# 2. Database Recovery
+restore_database() {
+    echo "Restoring database from backup..."
+    aws s3 cp s3://${BACKUP_BUCKET}/db-backup-${BACKUP_DATE}.sql.gz .
+    gunzip db-backup-${BACKUP_DATE}.sql.gz
+    psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} < db-backup-${BACKUP_DATE}.sql
+}
+
+# 3. EKS Recovery
+restore_eks() {
+    echo "Restoring EKS cluster..."
+    aws eks create-cluster \
+        --name ${CLUSTER_NAME} \
+        --role-arn ${EKS_ROLE_ARN} \
+        --resources-vpc-config subnetIds=${SUBNET_IDS},securityGroupIds=${SG_IDS}
+    
+    # Wait for cluster to be active
+    aws eks wait cluster-active --name ${CLUSTER_NAME}
+}
+
+# 4. Application Recovery
+deploy_applications() {
+    echo "Deploying applications..."
+    kubectl apply -f k8s/namespaces/
+    kubectl apply -f k8s/configs/
+    kubectl apply -f k8s/deployments/
+}
+
+# Main recovery process
+main() {
+    echo "Starting disaster recovery process..."
+    create_infrastructure
+    restore_database
+    restore_eks
+    deploy_applications
+    echo "Recovery process completed!"
+}
+
+main "$@"
+```
+
+[Would you like me to add:
+1. Additional automation scripts
+2. More detailed monitoring configurations
+3. Environment-specific optimization guides
+4. Capacity planning procedures?]
