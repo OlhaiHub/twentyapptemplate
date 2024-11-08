@@ -3,137 +3,60 @@
 ### Infrastructure Architecture
 ```mermaid
 graph TB
-    %% Internet Access
-    INTERNET((Internet)) --> IGW
-
-    subgraph AWS["AWS Cloud Infrastructure"]
-        %% Network Layer
-        subgraph NET["1-NETWORK LAYER"]
-            subgraph VPC["NET-001: VPC (10.0.0.0/16)"]
-                subgraph SUBNETS["Network Segments"]
-                    PUB["NET-100: Public Subnets"]
-                    PUB1["NET-101: Public 1a<br/>10.0.1.0/24"]
-                    PUB2["NET-102: Public 1b<br/>10.0.2.0/24"]
-                    PRIV["NET-200: Private Subnets"]
-                    PRIV1["NET-201: Private 1a<br/>10.0.3.0/24"]
-                    PRIV2["NET-202: Private 1b<br/>10.0.4.0/24"]
-                end
-                
-                subgraph ROUTING["NET-300: Routing"]
-                    IGW["NET-301: Internet Gateway"]
-                    NAT["NET-302: NAT Gateway"]
-                    RTB_PUB["NET-303: Public Routes"]
-                    RTB_PRIV["NET-304: Private Routes"]
-                end
+    subgraph EKS["EKS Cluster"]
+        CP["Control Plane"]
+        
+        subgraph FRONTEND["NODE-GROUP-1: Frontend"]
+            FN1["Node 1: t3.medium<br/>CPU: 2<br/>RAM: 4GB<br/>Storage: 20GB"]
+            FN2["Node 2: t3.medium<br/>CPU: 2<br/>RAM: 4GB<br/>Storage: 20GB"]
+            
+            subgraph F_PODS["Frontend Pods"]
+                FP1["Frontend Pod 1"]
+                FP2["Frontend Pod 2"]
             end
         end
-
-        %% Security Layer
-        subgraph SEC["2-SECURITY LAYER"]
-            subgraph SECGRP["SEC-100: Security Groups"]
-                SG_ALB["SEC-101: ALB SG<br/>IN: 80,443"]
-                SG_EKS["SEC-102: EKS SG<br/>IN: 443,10250"]
-                SG_NODE["SEC-103: Node SG<br/>IN: 22"]
-                SG_DB["SEC-104: DB SG<br/>IN: 5432"]
-            end
+        
+        subgraph BACKEND["NODE-GROUP-2: Backend"]
+            BN1["Node 1: t3.large<br/>CPU: 4<br/>RAM: 8GB<br/>Storage: 30GB"]
+            BN2["Node 2: t3.large<br/>CPU: 4<br/>RAM: 8GB<br/>Storage: 30GB"]
             
-            subgraph IAM["SEC-200: IAM"]
-                ROLE_EKS["SEC-201: EKS Role"]
-                ROLE_NODE["SEC-202: Node Role"]
-                ROLE_ALB["SEC-203: ALB Role"]
-            end
-            
-            subgraph KMS["SEC-300: Encryption"]
-                KEY_EKS["SEC-301: EKS Key"]
-                KEY_EBS["SEC-302: EBS Key"]
+            subgraph B_PODS["Backend Pods"]
+                BP1["Backend Pod 1"]
+                BP2["Backend Pod 2"]
             end
         end
-
-        %% EKS Layer
-        subgraph EKS["3-EKS LAYER"]
-            subgraph CLUSTER["EKS-100: Cluster"]
-                CP["EKS-101: Control Plane"]
-                NG["EKS-102: Node Groups"]
-                CNI["EKS-103: AWS CNI"]
-            end
+        
+        subgraph DATABASE["NODE-GROUP-3: Database"]
+            DN1["Node 1: t3.xlarge<br/>CPU: 4<br/>RAM: 16GB<br/>Storage: 100GB"]
             
-            subgraph K8S["EKS-200: Kubernetes"]
-                NS["EKS-201: Namespaces"]
-                DEPLOY["EKS-202: Deployments"]
-                SVC["EKS-203: Services"]
-                ING["EKS-204: Ingress"]
+            subgraph D_PODS["Database Pods"]
+                DP1["PostgreSQL StatefulSet"]
             end
-            
-            subgraph STORAGE["EKS-300: Storage"]
-                CSI["EKS-301: EBS CSI"]
-                SC["EKS-302: Storage Class"]
-                PV["EKS-303: PV/PVC"]
-            end
-        end
-
-        %% Application Layer
-        subgraph APP["4-APPLICATION LAYER"]
-            subgraph CONT["APP-100: Containers"]
-                FRONT["APP-101: Frontend"]
-                BACK["APP-102: Backend"]
-                DB["APP-103: PostgreSQL"]
-            end
-            
-            subgraph CONFIG["APP-200: Configs"]
-                ENV["APP-201: Environment"]
-                SECRET["APP-202: Secrets"]
-            end
-        end
-
-        %% Monitoring Layer
-        subgraph MON["5-MONITORING LAYER"]
-            CW["MON-101: CloudWatch"]
-            PROM["MON-102: Prometheus"]
-            ALERT["MON-103: Alerts"]
-            LOGS["MON-104: Logging"]
-        end
-
-        %% DNS Layer
-        subgraph DNS["6-DNS LAYER"]
-            R53["DNS-101: Route 53"]
-            ZONE["DNS-102: Hosted Zone"]
-            CERT["DNS-103: ACM Cert"]
         end
     end
 
-    %% Relationships
-    IGW --> PUB
-    NAT --> PRIV
-    PUB --> NAT
-    
-    SG_ALB --> CP
-    SG_EKS --> NG
-    
-    ROLE_EKS --> CP
-    ROLE_NODE --> NG
-    
-    CP --> K8S
-    K8S --> CONT
-    
-    CONT --> CONFIG
-    
-    CW --> LOGS
-    R53 --> ZONE
+    %% Taints and Tolerations
+    subgraph TAINTS["Node Taints"]
+        FT["Frontend Taint:<br/>dedicated=frontend:NoSchedule"]
+        BT["Backend Taint:<br/>dedicated=backend:NoSchedule"]
+        DT["Database Taint:<br/>dedicated=database:NoSchedule"]
+    end
 
-    classDef network fill:#e4f0f8,stroke:#336
-    classDef security fill:#ffe4e4,stroke:#633
-    classDef eks fill:#326ce5,stroke:#fff,color:#fff
-    classDef app fill:#e3f9e3,stroke:#363
-    classDef monitoring fill:#f0e4ff,stroke:#336
-    classDef dns fill:#f4f4f4,stroke:#666
+    FT --> FRONTEND
+    BT --> BACKEND
+    DT --> DATABASE
 
-    class NET,VPC,SUBNETS,ROUTING network
-    class SEC,SECGRP,IAM,KMS security
-    class EKS,CLUSTER,K8S,STORAGE eks
-    class APP,CONT,CONFIG app
-    class MON,CW,PROM,ALERT,LOGS monitoring
-    class DNS,R53,ZONE,CERT dns
+    classDef cp fill:#326ce5,stroke:#fff,color:#fff
+    classDef frontend fill:#00acc1,stroke:#fff,color:#fff
+    classDef backend fill:#ab47bc,stroke:#fff,color:#fff
+    classDef database fill:#ff7043,stroke:#fff,color:#fff
+    classDef taints fill:#78909c,stroke:#fff,color:#fff
 
+    class CP cp
+    class FRONTEND,FN1,FN2,F_PODS frontend
+    class BACKEND,BN1,BN2,B_PODS backend
+    class DATABASE,DN1,D_PODS database
+    class TAINTS,FT,BT,DT taints
 ```
 
 ### Deployment Workflow
