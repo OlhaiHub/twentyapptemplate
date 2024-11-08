@@ -231,6 +231,8 @@ graph TB
     class DATABASE,DB_RESOURCE,DB_CONFIG,DB_STORAGE database
     class NETWORKING,NET_ALB,NET_VPC,NET_SG network
 
+```
+```mermaid
 graph TB
     INTERNET((Internet Users)) --> ALB
 
