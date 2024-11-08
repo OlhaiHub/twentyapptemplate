@@ -57,11 +57,10 @@ graph TB
     class Network,IGW,NAT,RT,NACL network
     class Security,SG security
     class DNS,R53,DOMAIN dns
+```
 
 ### Deployment Workflow
 ```mermaid
-[Second Mermaid Diagram Above]
-```
 sequenceDiagram
     participant U as User
     participant AWS as AWS CLI
@@ -93,6 +92,7 @@ sequenceDiagram
     
     R53-->>U: DNS propagation complete
     EC2-->>U: Application ready
+```
 
 The infrastructure architecture diagram shows the AWS components and their relationships within the deployment, including:
 - VPC and subnet configuration
