@@ -3,124 +3,136 @@
 ### Infrastructure Architecture
 ```mermaid
 graph TB
-    subgraph NET["1-NETWORK LAYER"]
-        subgraph VPC["NET-001: TwentyCRM-VPC (10.0.0.0/16)"]
-            subgraph PUB["NET-100: Public Subnets"]
-                PUB1["NET-101: Public Subnet 1<br/>10.0.1.0/24<br/>sa-east-1a"]
-                PUB2["NET-102: Public Subnet 2<br/>10.0.2.0/24<br/>sa-east-1b"]
+    %% Internet Access
+    INTERNET((Internet)) --> IGW
+
+    subgraph AWS["AWS Cloud Infrastructure"]
+        %% Network Layer
+        subgraph NET["1-NETWORK LAYER"]
+            subgraph VPC["NET-001: VPC (10.0.0.0/16)"]
+                subgraph SUBNETS["Network Segments"]
+                    PUB["NET-100: Public Subnets"]
+                    PUB1["NET-101: Public 1a<br/>10.0.1.0/24"]
+                    PUB2["NET-102: Public 1b<br/>10.0.2.0/24"]
+                    PRIV["NET-200: Private Subnets"]
+                    PRIV1["NET-201: Private 1a<br/>10.0.3.0/24"]
+                    PRIV2["NET-202: Private 1b<br/>10.0.4.0/24"]
+                end
+                
+                subgraph ROUTING["NET-300: Routing"]
+                    IGW["NET-301: Internet Gateway"]
+                    NAT["NET-302: NAT Gateway"]
+                    RTB_PUB["NET-303: Public Routes"]
+                    RTB_PRIV["NET-304: Private Routes"]
+                end
+            end
+        end
+
+        %% Security Layer
+        subgraph SEC["2-SECURITY LAYER"]
+            subgraph SECGRP["SEC-100: Security Groups"]
+                SG_ALB["SEC-101: ALB SG<br/>IN: 80,443"]
+                SG_EKS["SEC-102: EKS SG<br/>IN: 443,10250"]
+                SG_NODE["SEC-103: Node SG<br/>IN: 22"]
+                SG_DB["SEC-104: DB SG<br/>IN: 5432"]
             end
             
-            subgraph PRIV["NET-200: Private Subnets"]
-                PRIV1["NET-201: Private Subnet 1<br/>10.0.3.0/24<br/>sa-east-1a"]
-                PRIV2["NET-202: Private Subnet 2<br/>10.0.4.0/24<br/>sa-east-1b"]
+            subgraph IAM["SEC-200: IAM"]
+                ROLE_EKS["SEC-201: EKS Role"]
+                ROLE_NODE["SEC-202: Node Role"]
+                ROLE_ALB["SEC-203: ALB Role"]
             end
             
-            subgraph ROUTE["NET-300: Routing"]
-                IGW["NET-301: Internet Gateway"]
-                NAT["NET-302: NAT Gateway"]
-                RTP["NET-303: Public Route Table"]
-                RTR["NET-304: Private Route Table"]
+            subgraph KMS["SEC-300: Encryption"]
+                KEY_EKS["SEC-301: EKS Key"]
+                KEY_EBS["SEC-302: EBS Key"]
+            end
+        end
+
+        %% EKS Layer
+        subgraph EKS["3-EKS LAYER"]
+            subgraph CLUSTER["EKS-100: Cluster"]
+                CP["EKS-101: Control Plane"]
+                NG["EKS-102: Node Groups"]
+                CNI["EKS-103: AWS CNI"]
             end
             
-            subgraph NACL["NET-400: Network ACLs"]
-                NACLPUB["NET-401: Public NACL<br/>Allow 80,443,22"]
-                NACLPRIV["NET-402: Private NACL<br/>Allow 5432"]
+            subgraph K8S["EKS-200: Kubernetes"]
+                NS["EKS-201: Namespaces"]
+                DEPLOY["EKS-202: Deployments"]
+                SVC["EKS-203: Services"]
+                ING["EKS-204: Ingress"]
+            end
+            
+            subgraph STORAGE["EKS-300: Storage"]
+                CSI["EKS-301: EBS CSI"]
+                SC["EKS-302: Storage Class"]
+                PV["EKS-303: PV/PVC"]
             end
         end
-    end
 
-    subgraph SEC["2-SECURITY LAYER"]
-        subgraph SG["SEC-100: Security Groups"]
-            SGAPP["SEC-101: App SG<br/>IN: 80,443<br/>OUT: ALL"]
-            SGADM["SEC-102: Admin SG<br/>IN: 22<br/>OUT: ALL"]
-            SGDB["SEC-103: DB SG<br/>IN: 5432<br/>OUT: ALL"]
+        %% Application Layer
+        subgraph APP["4-APPLICATION LAYER"]
+            subgraph CONT["APP-100: Containers"]
+                FRONT["APP-101: Frontend"]
+                BACK["APP-102: Backend"]
+                DB["APP-103: PostgreSQL"]
+            end
+            
+            subgraph CONFIG["APP-200: Configs"]
+                ENV["APP-201: Environment"]
+                SECRET["APP-202: Secrets"]
+            end
         end
-        
-        subgraph IAM["SEC-200: IAM Configuration"]
-            ROLE["SEC-201: EC2 Role"]
-            S3POL["SEC-202: S3 Access"]
-            SMPOL["SEC-203: Secrets Manager"]
-            SSMPOL["SEC-204: Systems Manager"]
-        end
-        
-        subgraph SECRETS["SEC-300: Secrets Management"]
-            SM["SEC-301: Secrets Manager<br/>DB Credentials"]
-            SSM["SEC-302: Parameter Store<br/>App Config"]
-        end
-    end
 
-    subgraph COMP["3-COMPUTE LAYER"]
-        subgraph EC2["COMP-100: EC2 Resources"]
-            INST["COMP-101: t3.medium<br/>Ubuntu 20.04 LTS"]
-            EBS1["COMP-102: Root EBS<br/>20GB GP3"]
-            EBS2["COMP-103: Data EBS<br/>100GB GP3"]
+        %% Monitoring Layer
+        subgraph MON["5-MONITORING LAYER"]
+            CW["MON-101: CloudWatch"]
+            PROM["MON-102: Prometheus"]
+            ALERT["MON-103: Alerts"]
+            LOGS["MON-104: Logging"]
         end
-        
-        subgraph DOCKER["COMP-200: Docker Platform"]
-            ENGINE["COMP-201: Docker Engine"]
-            COMPOSE["COMP-202: Docker Compose"]
-            BENCH["COMP-203: Docker Bench Security"]
-        end
-    end
 
-    subgraph APP["4-APPLICATION LAYER"]
-        subgraph CONT["APP-100: Containers"]
-            FRONT["APP-101: Frontend<br/>Port: 80"]
-            BACK["APP-102: Backend<br/>Port: 3000"]
-            DB["APP-103: PostgreSQL<br/>Port: 5432"]
+        %% DNS Layer
+        subgraph DNS["6-DNS LAYER"]
+            R53["DNS-101: Route 53"]
+            ZONE["DNS-102: Hosted Zone"]
+            CERT["DNS-103: ACM Cert"]
         end
-        
-        subgraph CONF["APP-200: Configuration"]
-            ENV["APP-201: Environment"]
-            CREDS["APP-202: Credentials"]
-        end
-    end
-
-    subgraph MON["5-MONITORING LAYER"]
-        CW["MON-101: CloudWatch"]
-        LOGS["MON-102: Container Logs"]
-        TRAIL["MON-103: CloudTrail"]
-        FLOW["MON-104: VPC Flow Logs"]
-    end
-
-    subgraph DNS["6-DNS LAYER"]
-        R53["DNS-101: Route 53<br/>olhai.app.br"]
-        AREC["DNS-102: A Record<br/>mGenialdev.olhai.app.br"]
     end
 
     %% Relationships
-    IGW --> RTP
-    NAT --> RTR
-    RTP --> PUB1 & PUB2
-    RTR --> PRIV1 & PRIV2
+    IGW --> PUB
+    NAT --> PRIV
+    PUB --> NAT
     
-    SGAPP & SGADM & SGDB --> INST
-    ROLE --> INST
+    SG_ALB --> CP
+    SG_EKS --> NG
     
-    INST --> ENGINE
-    ENGINE --> CONT
+    ROLE_EKS --> CP
+    ROLE_NODE --> NG
     
-    SM & SSM --> ENV
+    CP --> K8S
+    K8S --> CONT
+    
+    CONT --> CONFIG
     
     CW --> LOGS
-    FLOW --> VPC
-    
-    R53 --> AREC
-    AREC --> INST
+    R53 --> ZONE
 
     classDef network fill:#e4f0f8,stroke:#336
     classDef security fill:#ffe4e4,stroke:#633
-    classDef compute fill:#f9eee3,stroke:#663
-    classDef application fill:#e3f9e3,stroke:#363
+    classDef eks fill:#326ce5,stroke:#fff,color:#fff
+    classDef app fill:#e3f9e3,stroke:#363
     classDef monitoring fill:#f0e4ff,stroke:#336
     classDef dns fill:#f4f4f4,stroke:#666
 
-    class NET,VPC,PUB,PRIV,ROUTE,NACL network
-    class SEC,SG,IAM,SECRETS security
-    class COMP,EC2,DOCKER compute
-    class APP,CONT,CONF application
-    class MON,CW,LOGS,TRAIL,FLOW monitoring
-    class DNS,R53,AREC dns
+    class NET,VPC,SUBNETS,ROUTING network
+    class SEC,SECGRP,IAM,KMS security
+    class EKS,CLUSTER,K8S,STORAGE eks
+    class APP,CONT,CONFIG app
+    class MON,CW,PROM,ALERT,LOGS monitoring
+    class DNS,R53,ZONE,CERT dns
 
 ```
 
