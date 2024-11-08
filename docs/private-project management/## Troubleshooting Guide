@@ -1,0 +1,235 @@
+## Troubleshooting Guide
+
+### 1. Common Issues and Solutions
+
+#### Connection Issues
+```bash
+# Check EKS Cluster Status
+aws eks describe-cluster --name twenty-dev-cluster --query 'cluster.status'
+
+# Check Node Status
+kubectl get nodes
+kubectl describe node <node-name>
+
+# Check Pod Status
+kubectl get pods -n twenty-dev
+kubectl describe pod <pod-name> -n twenty-dev
+kubectl logs <pod-name> -n twenty-dev
+```
+
+#### Database Issues
+```bash
+# Check PostgreSQL Status
+sudo systemctl status postgresql
+sudo -u postgres pg_isready
+
+# Check Database Logs
+sudo tail -f /var/log/postgresql/postgresql-13-main.log
+
+# Check Database Connections
+sudo -u postgres psql -c "SELECT * FROM pg_stat_activity;"
+```
+
+#### Network Issues
+```bash
+# Test Network Connectivity
+kubectl exec -it <pod-name> -n twenty-dev -- curl backend-service:3000/health
+kubectl exec -it <pod-name> -n twenty-dev -- nslookup postgres-service
+
+# Check Security Groups
+aws ec2 describe-security-groups --group-ids <sg-id>
+
+# Check VPC Flow Logs
+aws logs tail /aws/vpc/flowlogs/<log-group>
+```
+
+### 2. Maintenance Procedures
+
+#### Regular Maintenance Checklist
+
+```mermaid
+graph TB
+    subgraph MAINTENANCE["Maintenance Tasks"]
+        subgraph DAILY["Daily Tasks"]
+            D1["Log Analysis<br/>- Error Rates<br/>- Performance Metrics"]
+            D2["Backup Verification<br/>- Database Backups<br/>- Config Backups"]
+            D3["Resource Monitoring<br/>- CPU/Memory Usage<br/>- Disk Space"]
+        end
+
+        subgraph WEEKLY["Weekly Tasks"]
+            W1["Security Updates<br/>- OS Patches<br/>- Package Updates"]
+            W2["Performance Analysis<br/>- Query Performance<br/>- Response Times"]
+            W3["Capacity Planning<br/>- Resource Trends<br/>- Scaling Needs"]
+        end
+
+        subgraph MONTHLY["Monthly Tasks"]
+            M1["Security Audit<br/>- Access Reviews<br/>- Policy Updates"]
+            M2["Disaster Recovery Test<br/>- Backup Restore<br/>- Failover Test"]
+            M3["Infrastructure Review<br/>- Cost Analysis<br/>- Optimization"]
+        end
+    end
+
+    classDef daily fill:#E6F3FF,stroke:#3182CE
+    classDef weekly fill:#C6F6D5,stroke:#38A169
+    classDef monthly fill:#FED7D7,stroke:#E53E3E
+
+    class DAILY,D1,D2,D3 daily
+    class WEEKLY,W1,W2,W3 weekly
+    class MONTHLY,M1,M2,M3 monthly
+```
+
+#### Maintenance Scripts
+
+```bash
+#!/bin/bash
+# maintenance.sh
+
+# Update System Packages
+sudo apt update
+sudo apt upgrade -y
+
+# PostgreSQL Maintenance
+sudo -u postgres vacuumdb --all --analyze
+
+# Cleanup Docker
+docker system prune -f
+docker volume prune -f
+
+# Kubernetes Maintenance
+kubectl delete pods --field-selector status.phase=Failed -A
+kubectl delete pods --field-selector status.phase=Succeeded -A
+```
+
+### 3. Scaling Procedures
+
+```mermaid
+graph TB
+    subgraph SCALING["Scaling Procedures"]
+        subgraph HORIZONTAL["Horizontal Scaling"]
+            H1["Pod Scaling<br/>- HPA Config<br/>- Resource Metrics"]
+            H2["Node Scaling<br/>- Cluster Autoscaler<br/>- Node Groups"]
+            H3["Database Scaling<br/>- Read Replicas<br/>- Connection Pooling"]
+        end
+
+        subgraph VERTICAL["Vertical Scaling"]
+            V1["Instance Sizing<br/>- CPU Upgrade<br/>- Memory Upgrade"]
+            V2["Storage Expansion<br/>- Volume Resize<br/>- IOPS Increase"]
+            V3["Performance Tuning<br/>- Resource Limits<br/>- Config Optimization"]
+        end
+    end
+
+    classDef horizontal fill:#E6F3FF,stroke:#3182CE
+    classDef vertical fill:#C6F6D5,stroke:#38A169
+
+    class HORIZONTAL,H1,H2,H3 horizontal
+    class VERTICAL,V1,V2,V3 vertical
+```
+
+#### Scaling Commands
+```bash
+# Horizontal Pod Autoscaling
+kubectl scale deployment twenty-frontend -n twenty-dev --replicas=4
+kubectl autoscale deployment twenty-backend -n twenty-dev --min=2 --max=6 --cpu-percent=70
+
+# Node Group Scaling
+aws eks update-nodegroup-config \
+    --cluster-name twenty-dev-cluster \
+    --nodegroup-name twenty-frontend \
+    --scaling-config minSize=3,maxSize=6,desiredSize=4
+
+# Database Scaling
+aws ec2 modify-instance-attribute \
+    --instance-id i-1234567890abcdef0 \
+    --instance-type t3.xlarge
+```
+
+### 4. Disaster Recovery
+
+```mermaid
+graph TB
+    subgraph DR["Disaster Recovery Procedures"]
+        subgraph PREP["Preparation"]
+            P1["Backup Verification<br/>- Database Dumps<br/>- Configuration<br/>- State Files"]
+            P2["Documentation<br/>- Recovery Procedures<br/>- Contact Information<br/>- Access Details"]
+            P3["Testing<br/>- Regular DR Tests<br/>- Failover Tests<br/>- Restore Tests"]
+        end
+
+        subgraph RECOVERY["Recovery Steps"]
+            R1["Infrastructure<br/>- VPC/Network<br/>- Security Groups<br/>- IAM Roles"]
+            R2["Data Recovery<br/>- Database Restore<br/>- Config Restore<br/>- Secrets Recovery"]
+            R3["Application<br/>- EKS Deployment<br/>- Service Verification<br/>- DNS Updates"]
+        end
+
+        subgraph POST["Post-Recovery"]
+            POST1["Validation<br/>- Service Health<br/>- Data Integrity<br/>- Performance"]
+            POST2["Documentation<br/>- Incident Report<br/>- Lessons Learned<br/>- Process Updates"]
+        end
+    end
+
+    classDef prep fill:#E6F3FF,stroke:#3182CE
+    classDef recovery fill:#C6F6D5,stroke:#38A169
+    classDef post fill:#FED7D7,stroke:#E53E3E
+
+    class PREP,P1,P2,P3 prep
+    class RECOVERY,R1,R2,R3 recovery
+    class POST,POST1,POST2 post
+```
+
+#### Disaster Recovery Scripts
+
+```bash
+#!/bin/bash
+# dr-restore.sh
+
+# Set variables
+BACKUP_DATE=$1
+S3_BUCKET="twenty-backups"
+DB_NAME="twentydb"
+DB_USER="twenty"
+
+# 1. Restore Database
+echo "Restoring database from backup..."
+aws s3 cp s3://$S3_BUCKET/backup_$BACKUP_DATE.sql.gz .
+gunzip backup_$BACKUP_DATE.sql.gz
+psql -U $DB_USER -d $DB_NAME < backup_$BACKUP_DATE.sql
+
+# 2. Restore EKS Configuration
+echo "Restoring EKS configuration..."
+aws s3 cp s3://$S3_BUCKET/eks-config_$BACKUP_DATE.yaml .
+kubectl apply -f eks-config_$BACKUP_DATE.yaml
+
+# 3. Verify Services
+echo "Verifying services..."
+kubectl get pods -A
+kubectl get svc -A
+```
+
+### 5. Performance Monitoring
+
+```mermaid
+graph TB
+    subgraph MONITORING["Performance Monitoring"]
+        subgraph METRICS["Key Metrics"]
+            M1["Application Metrics<br/>- Response Time<br/>- Error Rate<br/>- Request Count"]
+            M2["Resource Metrics<br/>- CPU Usage<br/>- Memory Usage<br/>- Disk I/O"]
+            M3["Database Metrics<br/>- Query Performance<br/>- Connection Count<br/>- Cache Hit Ratio"]
+        end
+
+        subgraph ALERTS["Alert Configuration"]
+            A1["Critical Alerts<br/>- Service Down<br/>- High Error Rate<br/>- Resource Exhaustion"]
+            A2["Warning Alerts<br/>- High Usage<br/>- Slow Queries<br/>- Backup Failures"]
+        end
+    end
+
+    classDef metrics fill:#E6F3FF,stroke:#3182CE
+    classDef alerts fill:#C6F6D5,stroke:#38A169
+
+    class METRICS,M1,M2,M3 metrics
+    class ALERTS,A1,A2 alerts
+```
+
+[Would you like me to add:
+1. Additional monitoring configurations
+2. More detailed recovery procedures
+3. Security audit procedures
+4. Performance optimization guides?]
