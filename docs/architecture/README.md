@@ -1,31 +1,45 @@
-# TwentyCRM Architecture Documentation
+# TwentyCRM Infrastructure Documentation
 
 ## Table of Contents
-1. [Infrastructure Overview](#infrastructure-overview)
-2. [Component Specifications](#component-specifications)
-3. [Network Flow Patterns](#network-flow-patterns)
-4. [Monitoring and Backup](#monitoring-and-backup)
-5. [Security Configuration](#security-configuration)
-6. [Scaling Patterns](#scaling-patterns)
-7. [CI/CD Pipeline](#cicd-pipeline)
-8. [Failure Recovery](#failure-recovery)
-9. [Subsystem Configuration](#subsystem-configuration)
+1. [Overview](#overview)
+2. [Infrastructure Architecture](#infrastructure-architecture)
+3. [Component Specifications](#component-specifications)
+4. [Network Architecture](#network-architecture)
+5. [Security Architecture](#security-architecture)
+6. [Monitoring and Backup](#monitoring-and-backup)
+7. [Scaling Patterns](#scaling-patterns)
+8. [CI/CD Pipeline](#cicd-pipeline)
+9. [Failure Recovery](#failure-recovery)
+10. [Implementation Guide](#implementation-guide)
+11. [Troubleshooting](#troubleshooting)
 
-## Infrastructure Overview
+## Overview
+
+TwentyCRM is deployed across three environments:
+- Development (mGenialDev.olhai.app.br)
+- QA (mGenialQA.olhai.app.br)
+- Production (mGenial.olhai.app.br)
+
+### Environment Specifications
+
+| Component | Development | QA | Production |
+|-----------|------------|-------|------------|
+| VPC CIDR | 10.0.0.0/16 | 10.1.0.0/16 | 10.2.0.0/16 |
+| Frontend Nodes | t3.medium x2 | t3.medium x2 | t3.large x3 |
+| Backend Nodes | t3.large x2 | t3.large x2 | t3.xlarge x3 |
+| Database | t3.large 50GB | t3.large 50GB | t3.xlarge 100GB |
+
+## Infrastructure Architecture
 
 ```mermaid
 graph TB
-    %% Global DNS and User Access
-    USERS((Internet Users))
-    USERS --> DEV_R53 & QA_R53 & PROD_R53
+    USERS((Internet Users)) --> DEV_R53 & QA_R53 & PROD_R53
 
-    %% DEVELOPMENT ENVIRONMENT
     subgraph DEV["DEVELOPMENT - mGenialDev.olhai.app.br"]
         DEV_R53["DNS-101: Route53 Zone"] --> DEV_ACM["DNS-102: ACM SSL"]
         DEV_ACM --> DEV_ALB["ALB-101: Load Balancer"]
         
         subgraph DEV_VPC["VPC-101: Dev VPC (10.0.0.0/16)"]
-            %% Network Components
             DEV_IGW["NET-101: Internet Gateway"]
             DEV_NAT["NET-102: NAT Gateway"]
             
@@ -34,91 +48,98 @@ graph TB
                 DEV_PUB2["NET-202: Public-1B<br/>10.0.2.0/24"]
                 DEV_PRIV1["NET-203: Private-1A<br/>10.0.3.0/24"]
                 DEV_PRIV2["NET-204: Private-1B<br/>10.0.4.0/24"]
-                
-                DEV_RT_PUB["NET-205: Public Routes"]
-                DEV_RT_PRIV["NET-206: Private Routes"]
             end
 
-            subgraph DEV_EKS["EKS-100: Dev Cluster v1.27"]
+            subgraph DEV_EKS["EKS-100: Dev Cluster"]
                 DEV_CP["EKS-101: Control Plane"]
-                
                 subgraph DEV_NODES["EKS-200: Node Groups"]
-                    DEV_FNG["Frontend Nodes<br/>t3.medium x2<br/>Min: 2, Max: 4"]
-                    DEV_BNG["Backend Nodes<br/>t3.large x2<br/>Min: 2, Max: 4"]
-                end
-
-                subgraph DEV_K8S["EKS-300: K8s Resources"]
-                    DEV_NS["twenty-dev Namespace"]
-                    DEV_F_SVC["Frontend Service: 3001"]
-                    DEV_B_SVC["Backend Service: 3000"]
-                    DEV_CM["ConfigMaps"]
-                    DEV_SEC["Secrets"]
+                    DEV_FNG["Frontend Nodes<br/>t3.medium x2"]
+                    DEV_BNG["Backend Nodes<br/>t3.large x2"]
                 end
             end
-            
+
             subgraph DEV_DB["DB-100: Database"]
-                DEV_EC2["EC2 t3.large<br/>Ubuntu 20.04"]
-                DEV_PG["PostgreSQL 13<br/>+ pg_graphql<br/>+ uuid-ossp"]
-                DEV_VOL["GP3 50GB Volume"]
+                DEV_EC2["EC2 t3.large"]
+                DEV_PG["PostgreSQL 13"]
+                DEV_VOL["GP3 50GB"]
             end
-        end
-
-        subgraph DEV_MONITOR["MON-100: Monitoring"]
-            DEV_CW["CloudWatch Logs"]
-            DEV_PROM["Prometheus"]
-            DEV_GRAF["Grafana"]
-            DEV_ALERT["Alerts"]
         end
     end
 
-    %% Style Definitions
+    subgraph QA["QA - mGenialQA.olhai.app.br"]
+        QA_R53["DNS-201: Route53 Zone"] --> QA_ACM["DNS-202: ACM SSL"]
+        QA_ACM --> QA_ALB["ALB-201: Load Balancer"]
+        
+        subgraph QA_VPC["VPC-201: QA VPC (10.1.0.0/16)"]
+            QA_IGW["NET-201: Internet Gateway"]
+            QA_NAT["NET-202: NAT Gateway"]
+            
+            subgraph QA_NET["NET-300: Network"]
+                QA_PUB1["NET-301: Public-1A<br/>10.1.1.0/24"]
+                QA_PUB2["NET-302: Public-1B<br/>10.1.2.0/24"]
+                QA_PRIV1["NET-303: Private-1A<br/>10.1.3.0/24"]
+                QA_PRIV2["NET-304: Private-1B<br/>10.1.4.0/24"]
+            end
+
+            subgraph QA_EKS["EKS-400: QA Cluster"]
+                QA_CP["EKS-401: Control Plane"]
+                subgraph QA_NODES["EKS-500: Node Groups"]
+                    QA_FNG["Frontend Nodes<br/>t3.medium x2"]
+                    QA_BNG["Backend Nodes<br/>t3.large x2"]
+                end
+            end
+
+            subgraph QA_DB["DB-200: Database"]
+                QA_EC2["EC2 t3.large"]
+                QA_PG["PostgreSQL 13"]
+                QA_VOL["GP3 50GB"]
+            end
+        end
+    end
+
+    subgraph PROD["PRODUCTION - mGenial.olhai.app.br"]
+        PROD_R53["DNS-301: Route53 Zone"] --> PROD_ACM["DNS-302: ACM SSL"]
+        PROD_ACM --> PROD_ALB["ALB-301: Load Balancer"]
+        
+        subgraph PROD_VPC["VPC-301: Prod VPC (10.2.0.0/16)"]
+            PROD_IGW["NET-301: Internet Gateway"]
+            PROD_NAT["NET-302: NAT Gateway"]
+            
+            subgraph PROD_NET["NET-400: Network"]
+                PROD_PUB1["NET-401: Public-1A<br/>10.2.1.0/24"]
+                PROD_PUB2["NET-402: Public-1B<br/>10.2.2.0/24"]
+                PROD_PRIV1["NET-403: Private-1A<br/>10.2.3.0/24"]
+                PROD_PRIV2["NET-404: Private-1B<br/>10.2.4.0/24"]
+            end
+
+            subgraph PROD_EKS["EKS-700: Prod Cluster"]
+                PROD_CP["EKS-701: Control Plane"]
+                subgraph PROD_NODES["EKS-800: Node Groups"]
+                    PROD_FNG["Frontend Nodes<br/>t3.large x3"]
+                    PROD_BNG["Backend Nodes<br/>t3.xlarge x3"]
+                end
+            end
+
+            subgraph PROD_DB["DB-300: Database"]
+                PROD_EC2["EC2 t3.xlarge"]
+                PROD_PG["PostgreSQL 13"]
+                PROD_VOL["GP3 100GB"]
+            end
+        end
+    end
+
     classDef dev fill:#E6F3FF,stroke:#3182CE
     classDef qa fill:#C6F6D5,stroke:#38A169
     classDef prod fill:#FED7D7,stroke:#E53E3E
-    classDef security fill:#FEEBC8,stroke:#DD6B20
-    classDef monitoring fill:#E9D8FD,stroke:#805AD5
 
-    %% Apply Styles
-    class DEV,DEV_VPC,DEV_NET,DEV_EKS,DEV_DB,DEV_MONITOR dev
+    class DEV,DEV_VPC,DEV_NET,DEV_EKS,DEV_DB dev
+    class QA,QA_VPC,QA_NET,QA_EKS,QA_DB qa
+    class PROD,PROD_VPC,PROD_NET,PROD_EKS,PROD_DB prod
 ```
 
-## Component Specifications
-
-```mermaid
-graph TB
-    subgraph COMPONENT_SPECS["Component Detailed Specifications"]
-        subgraph FRONTEND["Frontend Specifications"]
-            FE_RESOURCE["Resource Requirements<br/>DEV/QA:<br/>- CPU: 2 vCPU<br/>- Memory: 4GB<br/>PROD:<br/>- CPU: 4 vCPU<br/>- Memory: 8GB"]
-            FE_CONFIG["Configuration<br/>- Port: 3001<br/>- Node Version: 16.x<br/>- NPM Memory: 4GB<br/>- Max Old Space: 2GB"]
-            FE_HEALTH["Health Checks<br/>- Readiness: /ready<br/>- Liveness: /health<br/>- Period: 10s"]
-        end
-
-        subgraph BACKEND["Backend Specifications"]
-            BE_RESOURCE["Resource Requirements<br/>DEV/QA:<br/>- CPU: 4 vCPU<br/>- Memory: 8GB<br/>PROD:<br/>- CPU: 8 vCPU<br/>- Memory: 16GB"]
-            BE_CONFIG["Configuration<br/>- Port: 3000<br/>- Node Version: 16.x<br/>- Max Connections: 1000<br/>- Body Limit: 10mb"]
-            BE_HEALTH["Health Checks<br/>- Readiness: /ready<br/>- Liveness: /health<br/>- DB Check: /dbhealth"]
-        end
-
-        subgraph DATABASE["Database Specifications"]
-            DB_RESOURCE["Resource Requirements<br/>DEV/QA:<br/>- CPU: 4 vCPU<br/>- Memory: 8GB<br/>PROD:<br/>- CPU: 8 vCPU<br/>- Memory: 16GB"]
-            DB_CONFIG["PostgreSQL Config<br/>- Version: 13<br/>- Max Connections: 200<br/>- Shared Buffers: 4GB<br/>- Work Mem: 64MB"]
-            DB_STORAGE["Storage Configuration<br/>DEV/QA: 50GB GP3<br/>PROD: 100GB GP3<br/>IOPS: 3000<br/>Throughput: 125MB/s"]
-        end
-    end
-
-    classDef frontend fill:#E6F3FF,stroke:#3182CE
-    classDef backend fill:#C6F6D5,stroke:#38A169
-    classDef database fill:#FED7D7,stroke:#E53E3E
-
-    class FRONTEND,FE_RESOURCE,FE_CONFIG,FE_HEALTH frontend
-    class BACKEND,BE_RESOURCE,BE_CONFIG,BE_HEALTH backend
-    class DATABASE,DB_RESOURCE,DB_CONFIG,DB_STORAGE database
-```
-
-[Continue with other diagrams...]
-
-Would you like me to:
-1. Continue with the remaining diagrams?
-2. Add configuration examples?
-3. Add implementation instructions?
-4. Add troubleshooting guides?
+[Would you like me to continue with the next sections? There's quite a bit more to cover, including:
+1. Network Flow Diagrams
+2. Security Configuration
+3. Monitoring Setup
+4. Implementation Instructions
+5. Troubleshooting Guide]
