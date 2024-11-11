@@ -2,112 +2,90 @@
 
 ### Infrastructure Architecture
 ```mermaid
-graph TB
-    subgraph AWS_Cloud["AWS Cloud"]
-        subgraph VPC["VPC (10.0.0.0/16)"]
-            subgraph PublicSubnets["Public Subnets"]
-                PS1["subnet-068eaefc740f64d7b\n10.0.1.0/24\nsa-east-1a"]
-                PS2["subnet-008663bb78c888cdf\n10.0.2.0/24\nsa-east-1b"]
-            end
+raph TB
+    subgraph "Source Repositories"
+        subgraph "Application Code"
+            TWENTY_REPO["twentyhq/twenty<br/>Upstream Twenty CRM<br/>Base Application"]
+            MGENIAL_REPO["olhai-hubgenial/mgenial<br/>Custom mGenial Code<br/>- UI/UX Customizations<br/>- Branding<br/>- Custom Features<br/>- Integration Logic"]
             
-            subgraph EC2["EC2 Instance (t3.medium)"]
-                APP["TwentyCRM Application\nDocker Containers"]
-                PG["PostgreSQL\nContainer"]
-            end
+            TWENTY_REPO -.->|Fork/Reference| MGENIAL_REPO
+        end
+
+        subgraph "Infrastructure Code"
+            INFRA_REPO["olhai-hubgenial/mgenial-infra<br/>Infrastructure as Code"]
             
-            subgraph Network["Network Components"]
-                IGW["Internet Gateway\nigw-038cd76e774743fa7"]
-                NAT["NAT Gateway\nnat-037f24730c0830d01"]
-                RT["Route Table\nrtb-06ae82970acef7c0a"]
-                NACL["Network ACL\nacl-03cd2bdada71b3e93"]
+            subgraph "Repository Structure"
+                TERRAFORM["terraform/<br/>- environments/<br/>- modules/<br/>- main.tf"]
+                K8S["kubernetes/<br/>- deployments/<br/>- services/<br/>- configs/"]
             end
-        end
-        
-        subgraph Security["Security"]
-            SG["Security Group"]
-            SG -->|Allow| HTTP[("Port 80\nHTTP")]
-            SG -->|Allow| HTTPS[("Port 443\nHTTPS")]
-            SG -->|Allow| SSH[("Port 22\nSSH")]
-            SG -->|Allow| POSTGRES[("Port 5432\nPostgreSQL")]
-        end
-        
-        subgraph DNS["Route 53"]
-            R53["Hosted Zone\nolhai.app.br"]
-            DOMAIN["mGenialdev.olhai.app.br"]
         end
     end
-    
-    INTERNET((Internet)) --> IGW
-    IGW --> RT
-    RT --> PublicSubnets
-    PublicSubnets --> EC2
-    EC2 --> SG
-    DOMAIN --> EC2
 
-    classDef vpc fill:#e4f0f8,stroke:#336
-    classDef subnet fill:#f4f4f4,stroke:#666
-    classDef ec2 fill:#f9eee3,stroke:#663
-    classDef network fill:#e3f9e3,stroke:#363
-    classDef security fill:#ffe4e4,stroke:#633
-    classDef dns fill:#f0e4ff,stroke:#336
-    
-    class VPC vpc
-    class PublicSubnets,PS1,PS2 subnet
-    class EC2,APP,PG ec2
-    class Network,IGW,NAT,RT,NACL network
-    class Security,SG security
-    class DNS,R53,DOMAIN dns
+    subgraph "CI/CD Pipelines"
+        MGENIAL_CI["mGenial Build Pipeline<br/>- Merge Upstream Changes<br/>- Apply Customizations<br/>- Build Custom Images<br/>- Run Tests"]
+        INFRA_CI["Infrastructure Pipeline<br/>- Terraform Plan/Apply<br/>- K8s Deployments"]
+        
+        MGENIAL_REPO --> MGENIAL_CI
+        INFRA_REPO --> INFRA_CI
+    end
+
+    subgraph "Artifact Storage"
+        S3["S3 State Storage<br/>olhai-hubgenial-terraform-state"]
+        DYNAMO["DynamoDB Locks<br/>olhai-hubgenial-terraform-locks"]
+        ECR["Amazon ECR<br/>mgenial-images"]
+    end
+
+    subgraph "AWS Infrastructure"
+        subgraph "DEV-VPC-101 (10.0.0.0/16)"
+            DEV_R53["DNS-101<br/>mGenialDev.olhai.app.br"]
+            DEV_ALB["ALB-101"]
+            DEV_EKS["EKS-100<br/>mGenial Pods:<br/>Frontend: t3.medium x2<br/>Backend: t3.large x2"]
+            DEV_DB_ASG["DB-100: ASG<br/>EC2: t3.large<br/>Postgres 13<br/>GP3 50GB"]
+        end
+        
+        subgraph "QA-VPC-201 (10.1.0.0/16)"
+            QA_R53["DNS-201<br/>mGenialQA.olhai.app.br"]
+            QA_ALB["ALB-201"]
+            QA_EKS["EKS-400<br/>mGenial Pods:<br/>Frontend: t3.medium x2<br/>Backend: t3.large x2"]
+            QA_DB_ASG["DB-200: ASG<br/>EC2: t3.large<br/>Postgres 13<br/>GP3 50GB"]
+        end
+        
+        subgraph "PROD-VPC-301 (10.2.0.0/16)"
+            PROD_R53["DNS-301<br/>mGenial.olhai.app.br"]
+            PROD_ALB["ALB-301"]
+            PROD_EKS["EKS-700<br/>mGenial Pods:<br/>Frontend: t3.large x3<br/>Backend: t3.xlarge x3"]
+            PROD_DB_ASG["DB-300: ASG<br/>EC2: t3.xlarge<br/>Postgres 13<br/>GP3 100GB"]
+        end
+    end
+
+    %% Application Flow
+    MGENIAL_CI -->|Push Custom Images| ECR
+    ECR -->|Pull mGenial Images| DEV_EKS
+    ECR -->|Pull mGenial Images| QA_EKS
+    ECR -->|Pull mGenial Images| PROD_EKS
+
+    %% Infrastructure Flow
+    INFRA_CI -->|Manage State| S3
+    INFRA_CI -->|Lock State| DYNAMO
+    S3 -->|Current State| DEV_EKS & QA_EKS & PROD_EKS
+    S3 -->|Current State| DEV_DB_ASG & QA_DB_ASG & PROD_DB_ASG
+
+    %% High contrast theme
+    classDef default fill:#1a1a1a,stroke:#fff,stroke-width:2px,color:#fff
+    classDef github fill:#2d333b,stroke:#fff,stroke-width:2px,color:#fff
+    classDef mgenial fill:#4d1f1f,stroke:#fff,stroke-width:3px,color:#fff
+    classDef state fill:#3d1f1f,stroke:#fff,stroke-width:2px,color:#fff
+    classDef dev fill:#1f3d1f,stroke:#fff,stroke-width:2px,color:#fff
+    classDef qa fill:#1f1f3d,stroke:#fff,stroke-width:2px,color:#fff
+    classDef prod fill:#3d1f3d,stroke:#fff,stroke-width:2px,color:#fff
+
+    class TWENTY_REPO github
+    class MGENIAL_REPO,MGENIAL_CI mgenial
+    class INFRA_REPO,TERRAFORM,K8S github
+    class S3,DYNAMO,ECR state
+    class DEV_R53,DEV_ALB,DEV_EKS,DEV_DB_ASG dev
+    class QA_R53,QA_ALB,QA_EKS,QA_DB_ASG qa
+    class PROD_R53,PROD_ALB,PROD_EKS,PROD_DB_ASG prod
 ```
 
-### Deployment Workflow
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant AWS as AWS CLI
-    participant EC2 as EC2 Instance
-    participant D as Docker
-    participant R53 as Route 53
 
-    U->>AWS: Run deployment script
-    AWS->>AWS: Create Security Group
-    Note over AWS: Configure inbound rules<br/>for ports 22, 80, 443, 5432
-    
-    AWS->>EC2: Launch t3.medium instance
-    Note over EC2: Ubuntu 20.04 LTS<br/>20GB GP2 Storage
-    
-    EC2->>EC2: Run user-data script
-    Note over EC2: Update system<br/>Install dependencies
-    
-    EC2->>D: Install Docker & Docker Compose
-    
-    EC2->>EC2: Clone Twenty repository
-    EC2->>EC2: Create .env file
-    
-    D->>D: Pull required images
-    D->>D: Start containers
-    Note over D: PostgreSQL<br/>Application containers
-    
-    AWS->>R53: Update DNS record
-    Note over R53: Point mGenialdev.olhai.app.br<br/>to EC2 public IP
-    
-    R53-->>U: DNS propagation complete
-    EC2-->>U: Application ready
-```
-
-The infrastructure architecture diagram shows the AWS components and their relationships within the deployment, including:
-- VPC and subnet configuration
-- EC2 instance with Docker containers
-- Security group rules
-- Network components (IGW, NAT, Route Tables)
-- DNS configuration
-
-The deployment workflow diagram illustrates the sequential steps of the deployment process:
-1. Initial script execution
-2. Security group creation
-3. EC2 instance launch
-4. System configuration
-5. Docker setup
-6. Application deployment
-7. DNS configuration
-
-These visual representations help understand both the static infrastructure and the dynamic deployment process of the TwentyCRM development environment.
