@@ -1,6 +1,4 @@
 ## Architecture Diagrams
-
-### Infrastructure Architecture
 ```mermaid
 raph TB
     subgraph "Source Repositories"
